@@ -63,6 +63,13 @@ struct SettingsView: View {
                 }
                 .padding(16)
                 .background(Theme.cardBackground())
+
+                Button("Replay Welcome Guide…") {
+                    state.hasCompletedOnboarding = false
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
             }
             .padding(20)
         }

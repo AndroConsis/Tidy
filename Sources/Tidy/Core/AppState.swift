@@ -22,11 +22,17 @@ final class AppState: ObservableObject {
         didSet { UserDefaults.standard.set(lastAutoCleanDate, forKey: "lastAutoCleanDate") }
     }
 
+    /// Gates the first-run welcome flow. False until the user finishes it once.
+    @Published var hasCompletedOnboarding: Bool {
+        didSet { UserDefaults.standard.set(hasCompletedOnboarding, forKey: "hasCompletedOnboarding") }
+    }
+
     init() {
         let defaults = UserDefaults.standard
         autoCleanEnabled = defaults.object(forKey: "autoCleanEnabled") as? Bool ?? false
         autoCleanFrequencyDays = defaults.object(forKey: "autoCleanFrequencyDays") as? Int ?? 7
         lastAutoCleanDate = defaults.object(forKey: "lastAutoCleanDate") as? Date
+        hasCompletedOnboarding = defaults.object(forKey: "hasCompletedOnboarding") as? Bool ?? false
     }
 
     var isAutoCleanDue: Bool {
