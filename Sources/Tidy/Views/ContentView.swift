@@ -99,6 +99,9 @@ struct ContentView: View {
 struct OverviewView: View {
     @EnvironmentObject var state: AppState
 
+    /// Drives a slight fade/rise-in for the whole overview on first appearance.
+    @State private var hasAppeared = false
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -120,21 +123,7 @@ struct OverviewView: View {
                 .padding(16)
                 .background(Theme.cardBackground())
 
-                HStack(spacing: 12) {
-                    Button {
-                        state.cleanAllRegenerable()
-                    } label: {
-                        Label("Clean all safe items · \(ByteCountFormatter.string(fromByteCount: state.result.safeAutoCleanBytes, countStyle: .file))", systemImage: "sparkles")
-                    }
-                    .buttonStyle(.gradientProminent)
-                    .disabled(state.result.safeAutoCleanBytes == 0)
-
-                    if state.autoCleanEnabled {
-                        Label("Auto-clean on", systemImage: "clock.badge.checkmark")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(Theme.teal)
-                    }
-                }
+                CleanActionRow()
 
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Recent Activity").font(.system(size: 14, weight: .semibold, design: .rounded))
@@ -161,8 +150,59 @@ struct OverviewView: View {
                 .background(Theme.cardBackground())
             }
             .padding(20)
+            .opacity(hasAppeared ? 1 : 0)
+            .offset(y: hasAppeared ? 0 : 8)
         }
         .navigationTitle("Overview")
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.4)) {
+                hasAppeared = true
+            }
+        }
+    }
+}
+
+/// The primary "Clean all safe items" action, plus the states around it:
+/// mid-scan, nothing found, and items that exist but need a manual review
+/// click instead of being silently lumped into "0 bytes".
+struct CleanActionRow: View {
+    @EnvironmentObject var state: AppState
+
+    private var reviewCount: Int {
+        state.result.all.filter { $0.safety == .review }.count
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if state.isScanning && state.lastScanDate == nil {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Scanning your Mac…").font(.system(size: 12)).foregroundStyle(.secondary)
+                }
+            } else if state.result.safeAutoCleanBytes > 0 {
+                Button {
+                    state.cleanAllRegenerable()
+                } label: {
+                    Label("Clean all safe items · \(ByteCountFormatter.string(fromByteCount: state.result.safeAutoCleanBytes, countStyle: .file))", systemImage: "sparkles")
+                }
+                .buttonStyle(.gradientProminent)
+            } else {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.teal)
+                    Text(reviewCount > 0
+                        ? "Nothing safe to auto-clean — \(reviewCount) item\(reviewCount == 1 ? "" : "s") could use a quick look."
+                        : "You're all tidy — nothing safe to auto-clean right now."
+                    )
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+                }
+            }
+
+            if state.autoCleanEnabled {
+                Label("Auto-clean on", systemImage: "clock.badge.checkmark")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Theme.teal)
+            }
+        }
     }
 }
 
@@ -184,17 +224,41 @@ struct DiskBar: View {
     let freeBytes: Int64
     let reclaimableBytes: Int64
 
+    /// Drives the fill-in-from-nothing animation on first appearance.
+    @State private var hasAppeared = false
+
     var body: some View {
         GeometryReader { geo in
             let total = max(freeBytes + reclaimableBytes, 1)
-            HStack(spacing: 3) {
-                Capsule().fill(Theme.warmGradient)
-                    .frame(width: max(geo.size.width * CGFloat(reclaimableBytes) / CGFloat(total) - 1.5, 0))
-                Capsule().fill(LinearGradient(colors: [Theme.teal, Theme.teal.opacity(0.6)], startPoint: .leading, endPoint: .trailing))
-                    .frame(width: max(geo.size.width * CGFloat(freeBytes) / CGFloat(total) - 1.5, 0))
+            let reclaimableFraction = hasAppeared ? CGFloat(reclaimableBytes) / CGFloat(total) : 0
+            let freeFraction = hasAppeared ? CGFloat(freeBytes) / CGFloat(total) : 0
+
+            // A single outer-rounded track holds both segments flush against
+            // each other, so the only curves are at the far left/right edges
+            // — the seam where reclaimable meets free stays a clean straight
+            // line instead of two inner curves butting up against each other.
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.primary.opacity(0.05))
+
+                HStack(spacing: 0) {
+                    Rectangle().fill(Theme.warmGradient)
+                        .frame(width: geo.size.width * reclaimableFraction)
+                    Rectangle().fill(LinearGradient(colors: [Theme.teal, Theme.teal.opacity(0.6)], startPoint: .leading, endPoint: .trailing))
+                        .frame(width: geo.size.width * freeFraction)
+                    Spacer(minLength: 0)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
+            .animation(.easeInOut(duration: 0.7), value: reclaimableBytes)
+            .animation(.easeInOut(duration: 0.7), value: freeBytes)
         }
         .frame(height: 16)
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.9).delay(0.1)) {
+                hasAppeared = true
+            }
+        }
     }
 }
 

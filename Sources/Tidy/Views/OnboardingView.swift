@@ -139,6 +139,8 @@ private struct SafetyRow: View {
 private struct PermissionsStep: View {
     let onNext: () -> Void
     @State private var hasFullDiskAccess = Scanner.hasFullDiskAccess()
+    @State private var hasFolderAccess = Scanner.hasFolderAccess()
+    @State private var isRequestingFolderAccess = false
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
 
     var body: some View {
@@ -146,9 +148,29 @@ private struct PermissionsStep: View {
             Text("A couple of permissions").font(.system(size: 22, weight: .bold, design: .rounded))
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.top, 8)
-            Text("Both are optional — Tidy works without them, just with less visibility.")
+            Text("All optional, and asked for here rather than as a surprise later — Tidy works without them, just with less visibility.")
                 .font(.system(size: 12)).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
+
+            PermissionRow(
+                icon: "folder.badge.gearshape",
+                title: "Downloads & Desktop",
+                detail: hasFolderAccess
+                    ? "Granted — Tidy can find old installers sitting in these folders."
+                    : "Lets Tidy spot forgotten .dmg/.pkg installers in Downloads and Desktop. macOS will show its own confirmation dialog(s).",
+                granted: hasFolderAccess,
+                actionTitle: hasFolderAccess ? "Granted" : (isRequestingFolderAccess ? "Requesting…" : "Allow")
+            ) {
+                isRequestingFolderAccess = true
+                DispatchQueue.global(qos: .userInitiated).async {
+                    Scanner.requestFolderAccess()
+                    DispatchQueue.main.async {
+                        hasFolderAccess = Scanner.hasFolderAccess()
+                        isRequestingFolderAccess = false
+                    }
+                }
+            }
+            .disabled(isRequestingFolderAccess)
 
             PermissionRow(
                 icon: "lock.shield",
@@ -171,12 +193,12 @@ private struct PermissionsStep: View {
                 granted: notificationStatus == .authorized,
                 actionTitle: notificationStatus == .authorized ? "Granted" : "Allow"
             ) {
-                Notifier.requestAuthorization()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { refreshNotificationStatus() }
+                Notifier.requestAuthorization { _ in refreshNotificationStatus() }
             }
 
             Button("Re-check permissions") {
                 hasFullDiskAccess = Scanner.hasFullDiskAccess()
+                hasFolderAccess = Scanner.hasFolderAccess()
                 refreshNotificationStatus()
             }
             .buttonStyle(.plain)

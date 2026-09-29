@@ -14,9 +14,16 @@ final class Scheduler {
 
     func start(with appState: AppState) {
         self.appState = appState
-        Task {
-            await appState.scan()
-            appState.runScheduledAutoCleanIfDue()
+        // Onboarding owns the first scan (it runs once permissions have been
+        // requested, in the Finish step). Scanning any earlier than that means
+        // modules like InstallersModule hit Desktop/Downloads before the user
+        // has even reached the permissions step, so macOS's folder-access
+        // prompt appears out of nowhere on top of the welcome screen.
+        if appState.hasCompletedOnboarding {
+            Task {
+                await appState.scan()
+                appState.runScheduledAutoCleanIfDue()
+            }
         }
 
         timer = Timer.scheduledTimer(withTimeInterval: checkInterval, repeats: true) { [weak self] _ in
@@ -27,7 +34,7 @@ final class Scheduler {
     }
 
     private func tick() {
-        guard let appState else { return }
+        guard let appState, appState.hasCompletedOnboarding else { return }
         let dueForWeekly = (appState.lastScanDate.map { Date().timeIntervalSince($0) > weekInterval }) ?? true
         let lowSpace = isFreeSpaceBelow(percent: 10)
         if dueForWeekly || lowSpace {

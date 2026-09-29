@@ -3,7 +3,6 @@ import AppKit
 
 struct MenuBarView: View {
     @EnvironmentObject var state: AppState
-    @Environment(\.openWindow) var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -59,8 +58,11 @@ struct MenuBarView: View {
             Divider()
 
             Button("Open Tidy…") {
-                NSApp.activate(ignoringOtherApps: true)
-                openWindow(id: "main")
+                // bringMainWindowToFront() creates the window via openWindow
+                // if it doesn't exist yet, or just raises it if it's already
+                // open but buried behind another app — single code path so
+                // there's no race between two separate open attempts.
+                (NSApp.delegate as? AppDelegate)?.bringMainWindowToFront()
             }
             .buttonStyle(.plain)
             .font(.system(size: 12))
