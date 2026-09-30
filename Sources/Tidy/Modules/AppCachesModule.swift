@@ -3,7 +3,7 @@ import Foundation
 /// General ~/Library/Caches contents, auto-updater leftovers, and
 /// Application Support folders that belong to apps no longer installed.
 enum AppCachesModule {
-    static let home = FileManager.default.homeDirectoryForCurrentUser
+    static let home = FSUtil.home
 
     // Folders in ~/Library/Caches we never touch even if large: they belong
     // to system services or things Tidy can't safely reason about.
@@ -78,6 +78,8 @@ enum AppCachesModule {
                 // Only treat clearly bundle-id-shaped names (reverse-DNS) as candidates.
                 guard name.contains("."), name.split(separator: ".").count >= 3 else { continue }
                 let bareID = name.replacingOccurrences(of: ".savedState", with: "")
+                // macOS's own services keep data here but aren't apps in /Applications.
+                guard !bareID.lowercased().hasPrefix("com.apple.") else { continue }
                 guard !installedBundleIDs.contains(bareID) else { continue }
                 let size = FSUtil.size(of: folder)
                 guard size > 20_000_000 else { continue }

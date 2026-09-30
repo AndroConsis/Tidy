@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var state: AppState
+    @ObservedObject private var folderAccess = FolderAccess.shared
 
     private let frequencies: [(String, Int)] = [
         ("Daily", 1), ("Weekly", 7), ("Monthly", 30)
@@ -51,6 +52,32 @@ struct SettingsView: View {
                 .padding(16)
                 .background(Theme.cardBackground())
 
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 18))
+                            .foregroundStyle(Theme.accentGradient)
+                        Text("General").font(.system(size: 16, weight: .semibold, design: .rounded))
+                    }
+                    Toggle("Open Tidy when I log in", isOn: $state.launchAtLogin)
+                        .toggleStyle(.switch)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Home folder access")
+                            Text(folderAccess.hasHomeAccess
+                                 ? "Granted. Tidy can scan caches and build data in your Home folder."
+                                 : "Not granted — most scans can't run until you choose your Home folder.")
+                                .font(.system(size: 11)).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button(folderAccess.hasHomeAccess ? "Choose Again…" : "Grant Access…") {
+                            if folderAccess.requestHomeAccess() { Task { await state.scan() } }
+                        }
+                    }
+                }
+                .padding(16)
+                .background(Theme.cardBackground())
+
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Image(systemName: "info.circle").foregroundStyle(.secondary)
@@ -59,7 +86,7 @@ struct SettingsView: View {
                     bullet("Tidy only scans the fixed list of paths built into each module — never a free filesystem walk.")
                     bullet("Every removal defaults to the Trash (Finder \u{201C}Put Back\u{201D} restores it) and is logged in Overview \u{2192} Recent Activity.")
                     bullet("Photos, Mail, Messages and your Trash are never touched automatically — Tidy only points you at the right Settings toggle.")
-                    bullet("Anything needing an admin password uses macOS's own authorization dialog. Tidy's code never sees or stores your password.")
+                    bullet("Tidy never asks for your admin password. Anything owned by macOS is shown in Finder for you to remove yourself.")
                 }
                 .padding(16)
                 .background(Theme.cardBackground())

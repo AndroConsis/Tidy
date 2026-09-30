@@ -3,11 +3,9 @@ import AppKit
 
 enum CleanerError: Error, LocalizedError {
     case commandFailed(String)
-    case cancelled
     var errorDescription: String? {
         switch self {
         case .commandFailed(let msg): return msg
-        case .cancelled: return "Cancelled"
         }
     }
 }
@@ -30,8 +28,9 @@ enum Cleaner {
             if status != 0 {
                 throw CleanerError.commandFailed(output)
             }
-        case .privilegedShell(let command):
-            try runPrivileged(command)
+        case .reveal(let path):
+            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+            return 0
         case .guide:
             // Nothing to do programmatically; UI shows instructions instead.
             return 0
@@ -57,26 +56,5 @@ enum Cleaner {
         if tool.hasPrefix("/") { return tool }
         let candidates = ["/usr/bin/\(tool)", "/usr/local/bin/\(tool)", "/opt/homebrew/bin/\(tool)"]
         return candidates.first(where: { FSUtil.exists($0) }) ?? "/usr/bin/\(tool)"
-    }
-
-    /// Runs a shell command with administrator privileges via macOS's own
-    /// authorization dialog. The user enters their own password/Touch ID
-    /// into a system-owned prompt — Tidy's code never sees or stores it.
-    private static func runPrivileged(_ command: String) throws {
-        let escaped = command
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        let source = "do shell script \"\(escaped)\" with administrator privileges"
-        guard let script = NSAppleScript(source: source) else {
-            throw CleanerError.commandFailed("Could not build the admin request.")
-        }
-        var errorInfo: NSDictionary?
-        script.executeAndReturnError(&errorInfo)
-        if let errorInfo {
-            let number = (errorInfo[NSAppleScript.errorNumber] as? Int) ?? 0
-            if number == -128 { throw CleanerError.cancelled } // user clicked Cancel
-            let message = (errorInfo[NSAppleScript.errorMessage] as? String) ?? "Unknown error"
-            throw CleanerError.commandFailed(message)
-        }
     }
 }

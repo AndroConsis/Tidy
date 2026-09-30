@@ -42,7 +42,11 @@ enum Section_: String, CaseIterable, Identifiable {
 
 struct ContentView: View {
     @EnvironmentObject var state: AppState
-    @State private var selection: Section_? = .overview
+    @State private var selection: Section_?
+
+    init(initialSelection: Section_ = .overview) {
+        _selection = State(initialValue: initialSelection)
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -99,12 +103,33 @@ struct ContentView: View {
 struct OverviewView: View {
     @EnvironmentObject var state: AppState
 
+    @ObservedObject private var folderAccess = FolderAccess.shared
+
     /// Drives a slight fade/rise-in for the whole overview on first appearance.
     @State private var hasAppeared = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
+                if !folderAccess.hasHomeAccess {
+                    HStack(spacing: 12) {
+                        Image(systemName: "folder.badge.questionmark")
+                            .font(.system(size: 22))
+                            .foregroundStyle(Theme.amber)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Tidy can't see your Home folder yet").font(.system(size: 13, weight: .semibold))
+                            Text("Most caches and Xcode data live there. Choose your Home folder once so scans can reach them.")
+                                .font(.system(size: 11)).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button("Grant Access…") {
+                            if folderAccess.requestHomeAccess() { Task { await state.scan() } }
+                        }
+                    }
+                    .padding(14)
+                    .background(Theme.cardBackground())
+                }
+
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Text("Storage").font(.system(size: 20, weight: .bold, design: .rounded))

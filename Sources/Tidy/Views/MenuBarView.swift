@@ -3,6 +3,10 @@ import AppKit
 
 struct MenuBarView: View {
     @EnvironmentObject var state: AppState
+    /// Passed in rather than looked up via `NSApp.delegate`: with
+    /// @NSApplicationDelegateAdaptor, NSApp.delegate is SwiftUI's own wrapper,
+    /// so casting it to Tidy's AppDelegate always fails.
+    let openMainWindow: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -58,11 +62,7 @@ struct MenuBarView: View {
             Divider()
 
             Button("Open Tidy…") {
-                // bringMainWindowToFront() creates the window via openWindow
-                // if it doesn't exist yet, or just raises it if it's already
-                // open but buried behind another app — single code path so
-                // there's no race between two separate open attempts.
-                (NSApp.delegate as? AppDelegate)?.bringMainWindowToFront()
+                openMainWindow()
             }
             .buttonStyle(.plain)
             .font(.system(size: 12))

@@ -3,7 +3,7 @@ import Foundation
 /// Package-manager and build-tool caches. All of these are re-downloaded /
 /// rebuilt automatically, so anything found here is `.regenerable`.
 enum DevCachesModule {
-    static let home = FileManager.default.homeDirectoryForCurrentUser
+    static let home = FSUtil.home
 
     struct KnownCache {
         let name: String

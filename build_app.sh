@@ -1,35 +1,24 @@
 #!/bin/bash
-# Builds Tidy.app: compiles the SPM executable in release mode, then
-# assembles it into a proper macOS app bundle (needed for notifications,
-# SMAppService login-item registration, and TCC/Full Disk Access prompts
-# to work — a bare command-line binary can't get any of those).
+# Builds a local, sandboxed Tidy.app for testing: same Xcode project,
+# entitlements and resources as the App Store build, but ad-hoc signed so it
+# runs on this Mac without a provisioning profile. App Store builds are made
+# with ./release_app_store.sh instead.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP_NAME="Tidy"
-BUILD_DIR=".build/release"
-APP_BUNDLE="build/${APP_NAME}.app"
+DERIVED="build/DerivedData"
+APP_BUNDLE="build/Tidy.app"
 
-echo "==> Building release binary"
-swift build -c release
+echo "==> Building Release with Xcode"
+xcodebuild -project Tidy.xcodeproj -scheme Tidy -configuration Release \
+  -derivedDataPath "$DERIVED" CODE_SIGNING_ALLOWED=NO build -quiet
 
-echo "==> Assembling ${APP_BUNDLE}"
-rm -rf "build"
-mkdir -p "${APP_BUNDLE}/Contents/MacOS"
-mkdir -p "${APP_BUNDLE}/Contents/Resources"
+echo "==> Copying to ${APP_BUNDLE}"
+rm -rf "$APP_BUNDLE"
+cp -R "$DERIVED/Build/Products/Release/Tidy.app" "$APP_BUNDLE"
 
-cp "${BUILD_DIR}/${APP_NAME}" "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
-cp "AppPackaging/Info.plist" "${APP_BUNDLE}/Contents/Info.plist"
-
-# Copy the SPM resource bundle produced by the build (currently empty, but
-# keeps this script correct if resources are added later).
-RESOURCE_BUNDLE="${BUILD_DIR}/Tidy_Tidy.bundle"
-if [ -d "$RESOURCE_BUNDLE" ]; then
-  cp -R "$RESOURCE_BUNDLE" "${APP_BUNDLE}/Contents/Resources/"
-fi
-
-echo "==> Ad-hoc code signing"
-codesign --force --deep --sign - "${APP_BUNDLE}"
+echo "==> Ad-hoc signing with sandbox entitlements"
+codesign --force --sign - --options runtime --entitlements AppPackaging/Tidy.entitlements "$APP_BUNDLE"
 
 echo "==> Done: ${APP_BUNDLE}"
 echo "Run it with: open \"${APP_BUNDLE}\""

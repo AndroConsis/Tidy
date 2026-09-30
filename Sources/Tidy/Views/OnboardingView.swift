@@ -138,9 +138,7 @@ private struct SafetyRow: View {
 
 private struct PermissionsStep: View {
     let onNext: () -> Void
-    @State private var hasFullDiskAccess = Scanner.hasFullDiskAccess()
-    @State private var hasFolderAccess = Scanner.hasFolderAccess()
-    @State private var isRequestingFolderAccess = false
+    @ObservedObject private var folderAccess = FolderAccess.shared
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
 
     var body: some View {
@@ -148,40 +146,20 @@ private struct PermissionsStep: View {
             Text("A couple of permissions").font(.system(size: 22, weight: .bold, design: .rounded))
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.top, 8)
-            Text("All optional, and asked for here rather than as a surprise later — Tidy works without them, just with less visibility.")
+            Text("Asked for here, once, rather than as a surprise later.")
                 .font(.system(size: 12)).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
 
             PermissionRow(
                 icon: "folder.badge.gearshape",
-                title: "Downloads & Desktop",
-                detail: hasFolderAccess
-                    ? "Granted — Tidy can find old installers sitting in these folders."
-                    : "Lets Tidy spot forgotten .dmg/.pkg installers in Downloads and Desktop. macOS will show its own confirmation dialog(s).",
-                granted: hasFolderAccess,
-                actionTitle: hasFolderAccess ? "Granted" : (isRequestingFolderAccess ? "Requesting…" : "Allow")
+                title: "Home folder",
+                detail: folderAccess.hasHomeAccess
+                    ? "Granted — Tidy can look at the caches and build data in your Home folder."
+                    : "Needed for almost everything Tidy finds (Xcode data, developer and app caches). macOS asks you to confirm by choosing the folder — it's already selected, just click Grant Access.",
+                granted: folderAccess.hasHomeAccess,
+                actionTitle: folderAccess.hasHomeAccess ? "Granted" : "Choose…"
             ) {
-                isRequestingFolderAccess = true
-                DispatchQueue.global(qos: .userInitiated).async {
-                    Scanner.requestFolderAccess()
-                    DispatchQueue.main.async {
-                        hasFolderAccess = Scanner.hasFolderAccess()
-                        isRequestingFolderAccess = false
-                    }
-                }
-            }
-            .disabled(isRequestingFolderAccess)
-
-            PermissionRow(
-                icon: "lock.shield",
-                title: "Full Disk Access",
-                detail: hasFullDiskAccess
-                    ? "Granted — Tidy can see Trash, Mail, Messages, and Safari sizes."
-                    : "Without it, Tidy can't size your Trash, Mail, Messages, or Safari data. After granting, quit and reopen Tidy for it to take effect.",
-                granted: hasFullDiskAccess,
-                actionTitle: hasFullDiskAccess ? "Granted" : "Open Settings"
-            ) {
-                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
+                folderAccess.requestHomeAccess()
             }
 
             PermissionRow(
@@ -195,15 +173,6 @@ private struct PermissionsStep: View {
             ) {
                 Notifier.requestAuthorization { _ in refreshNotificationStatus() }
             }
-
-            Button("Re-check permissions") {
-                hasFullDiskAccess = Scanner.hasFullDiskAccess()
-                hasFolderAccess = Scanner.hasFolderAccess()
-                refreshNotificationStatus()
-            }
-            .buttonStyle(.plain)
-            .font(.system(size: 11))
-            .foregroundStyle(.secondary)
 
             Spacer()
             HStack {
@@ -265,14 +234,18 @@ private struct FinishStep: View {
                 .font(.system(size: 48))
                 .foregroundStyle(Theme.accentGradient)
             Text("You're all set").font(.system(size: 24, weight: .bold, design: .rounded))
-            Text("Tidy lives in your menu bar (look for \u{2728}) and will check in weekly. Look for the full list of what it found after this first scan.")
+            Text("Tidy lives in your menu bar (look for \u{2728}) and re-checks weekly while it's running. The full list of what it found appears after this first scan.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: 380)
 
-            Toggle(isOn: $state.autoCleanEnabled) {
-                Text("Automatically clean SAFE items weekly")
-                    .font(.system(size: 12))
+            VStack(alignment: .leading, spacing: 10) {
+                Toggle(isOn: $state.launchAtLogin) {
+                    Text("Open Tidy when I log in").font(.system(size: 12))
+                }
+                Toggle(isOn: $state.autoCleanEnabled) {
+                    Text("Automatically clean SAFE items weekly").font(.system(size: 12))
+                }
             }
             .toggleStyle(.switch)
             .padding(.top, 6)

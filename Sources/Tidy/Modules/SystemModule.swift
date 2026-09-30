@@ -4,43 +4,27 @@ import Foundation
 /// user the supported, correct way to reclaim the space (a Settings
 /// toggle, emptying Trash, etc.). This is where Photos/iCloud guidance lives.
 enum SystemModule {
-    static let home = FileManager.default.homeDirectoryForCurrentUser
+    static let home = FSUtil.home
 
-    static func scan(hasFullDiskAccess: Bool) -> [CleanableItem] {
+    static func scan() -> [CleanableItem] {
         var items: [CleanableItem] = []
 
         // Photos library: guide only. Deleting photos locally while iCloud
         // Photos sync is on deletes them from iCloud too, so Tidy never
-        // touches this — it only detects size and points at the safe fix.
+        // touches this — it only points at the safe fix. The library is
+        // privacy-protected, so the sandbox can't size it.
         let photosPath = home.appendingPathComponent("Pictures/Photos Library.photoslibrary").path
         if FSUtil.exists(photosPath) {
-            let size = hasFullDiskAccess ? FSUtil.size(of: URL(fileURLWithPath: photosPath)) : 0
             items.append(CleanableItem(
                 name: "Photos Library",
                 path: photosPath,
-                paths: [],
-                sizeBytes: size,
-                lastModified: nil,
-                safety: .personal,
-                category: .system,
-                explanation: "If iCloud Photos is on, turn on \"Optimize Mac Storage\" in Photos > Settings > iCloud instead of deleting anything. Full-size originals stay in iCloud and download on demand.",
-                action: .guide("x-apple.systempreferences:com.apple.Photos-Settings.extension")
-            ))
-        }
-
-        // Trash: can't be sized without Full Disk Access; guide the user to grant it,
-        // and to simply empty the Trash for anything Tidy has already moved there.
-        if !hasFullDiskAccess {
-            items.append(CleanableItem(
-                name: "Full Disk Access not granted",
-                path: "",
                 paths: [],
                 sizeBytes: 0,
                 lastModified: nil,
                 safety: .personal,
                 category: .system,
-                explanation: "Tidy can't see the size of Trash, Mail, Messages or Safari data without Full Disk Access. Grant it in System Settings > Privacy & Security > Full Disk Access.",
-                action: .guide("x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")
+                explanation: "If iCloud Photos is on, turn on \"Optimize Mac Storage\" in Photos > Settings > iCloud instead of deleting anything. Full-size originals stay in iCloud and download on demand.",
+                action: .guide("x-apple.systempreferences:com.apple.Photos-Settings.extension")
             ))
         }
 

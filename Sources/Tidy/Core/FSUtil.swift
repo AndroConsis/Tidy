@@ -5,6 +5,45 @@ import Foundation
 enum FSUtil {
     static let fm = FileManager.default
 
+    /// The user's real home folder. Inside the sandbox,
+    /// `homeDirectoryForCurrentUser` points at Tidy's own container instead.
+    static let home: URL = {
+        guard let pw = getpwuid(getuid()), let dir = pw.pointee.pw_dir else {
+            return FileManager.default.homeDirectoryForCurrentUser
+        }
+        return URL(fileURLWithPath: String(cString: dir), isDirectory: true)
+    }()
+
+    /// Absolute path to the active Xcode's `simctl`. `xcrun` refuses to run
+    /// inside an App Sandbox, but calling `simctl` directly works. Returns nil
+    /// when only the Command Line Tools (no simulators) are installed.
+    static let simctlPath: String? = {
+        var developerDirs: [String] = []
+        // Unreadable inside the sandbox, but honoured when it isn't.
+        if let link = try? fm.destinationOfSymbolicLink(atPath: "/var/db/xcode_select_link") {
+            developerDirs.append(link)
+        }
+        let xcodes = ((try? fm.contentsOfDirectory(atPath: "/Applications")) ?? [])
+            .filter { $0.hasPrefix("Xcode") && $0.hasSuffix(".app") }
+            .sorted { $0 == "Xcode.app" || ($1 != "Xcode.app" && $0 < $1) }
+        developerDirs += xcodes.map { "/Applications/\($0)/Contents/Developer" }
+        return developerDirs
+            .map { "\($0)/usr/bin/simctl" }
+            .first { fm.isExecutableFile(atPath: $0) }
+    }()
+
+    /// Runs simctl and returns its JSON output. Inside the sandbox simctl
+    /// prints an Xcode-license warning before the JSON, so everything before
+    /// the first "{" is dropped.
+    static func simctlJSON(_ args: [String]) -> Any? {
+        guard let simctl = simctlPath else { return nil }
+        let (status, output) = run(simctl, args)
+        guard status == 0, let start = output.firstIndex(of: "{"),
+              let data = String(output[start...]).data(using: .utf8)
+        else { return nil }
+        return try? JSONSerialization.jsonObject(with: data)
+    }
+
     /// Real on-disk size of a file or directory, in bytes.
     /// Does NOT follow into a different mounted volume (so a mounted
     /// simulator .dmg image isn't double-counted against its host size).

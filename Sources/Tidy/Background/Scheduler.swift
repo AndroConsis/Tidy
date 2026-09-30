@@ -1,10 +1,8 @@
 import Foundation
-import ServiceManagement
 
 /// Runs a scan on launch, then again once a week (or immediately if free
-/// space drops below 10%) while the app is running. Also registers Tidy
-/// as a login item via SMAppService so the weekly check happens even if
-/// the user doesn't open the app themselves.
+/// space drops below 10%) while the app is running. Launching at login is
+/// the user's choice (AppState.launchAtLogin), never automatic.
 @MainActor
 final class Scheduler {
     private var timer: Timer?
@@ -14,11 +12,9 @@ final class Scheduler {
 
     func start(with appState: AppState) {
         self.appState = appState
-        // Onboarding owns the first scan (it runs once permissions have been
-        // requested, in the Finish step). Scanning any earlier than that means
-        // modules like InstallersModule hit Desktop/Downloads before the user
-        // has even reached the permissions step, so macOS's folder-access
-        // prompt appears out of nowhere on top of the welcome screen.
+        // Onboarding owns the first scan (it runs in the Finish step, after the
+        // user has been asked for Home folder access). Scanning earlier would
+        // find almost nothing and show a misleadingly empty result.
         if appState.hasCompletedOnboarding {
             Task {
                 await appState.scan()
@@ -30,7 +26,6 @@ final class Scheduler {
             guard let self else { return }
             Task { @MainActor [self] in self.tick() }
         }
-        registerLoginItemIfNeeded()
     }
 
     private func tick() {
@@ -56,11 +51,5 @@ final class Scheduler {
            let total = values.volumeTotalCapacity, total > 0
         else { return false }
         return (Double(free) / Double(total)) * 100 < percent
-    }
-
-    private func registerLoginItemIfNeeded() {
-        let service = SMAppService.mainApp
-        guard service.status != .enabled else { return }
-        try? service.register()
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import ServiceManagement
 
 @MainActor
 final class AppState: ObservableObject {
@@ -20,6 +21,21 @@ final class AppState: ObservableObject {
     }
     @Published var lastAutoCleanDate: Date? {
         didSet { UserDefaults.standard.set(lastAutoCleanDate, forKey: "lastAutoCleanDate") }
+    }
+
+    /// Opt-in only: App Review guideline 2.4.5(iii) forbids launching at
+    /// login without the user's consent.
+    @Published var launchAtLogin: Bool = SMAppService.mainApp.status == .enabled {
+        didSet {
+            let service = SMAppService.mainApp
+            guard launchAtLogin != (service.status == .enabled) else { return }
+            do {
+                if launchAtLogin { try service.register() } else { try service.unregister() }
+            } catch {
+                lastError = "Couldn't change the login item: \(error.localizedDescription)"
+                launchAtLogin = service.status == .enabled
+            }
+        }
     }
 
     /// Gates the first-run welcome flow. False until the user finishes it once.
@@ -58,13 +74,12 @@ final class AppState: ObservableObject {
         do {
             _ = try Cleaner.clean(item)
             recentActions = ActionLog.read()
-            // launchApp hands off to a vendor uninstaller wizard — nothing is
-            // actually removed yet, so keep the row until the next rescan.
-            if case .launchApp = item.action {} else {
-                removeFromResult(item)
+            // launchApp and reveal hand off to another app or to Finder —
+            // nothing is removed yet, so keep the row until the next rescan.
+            switch item.action {
+            case .trash, .command: removeFromResult(item)
+            case .launchApp, .reveal, .guide: break
             }
-        } catch CleanerError.cancelled {
-            // User declined the admin prompt — not an error worth surfacing.
         } catch {
             lastError = "Couldn't clean \(item.name): \(error.localizedDescription)"
         }

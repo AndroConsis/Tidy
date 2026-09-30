@@ -20,6 +20,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
+        #if DEBUG
+        if ScreenshotRenderer.runIfRequested() { return }
+        #endif
 
         let completedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
         guard !completedOnboarding else { return }
@@ -122,7 +125,7 @@ struct TidyApp: App {
         let _ = { appDelegate.openMainWindow = { openWindow(id: "main") } }()
 
         MenuBarExtra("Tidy", systemImage: "sparkles") {
-            MenuBarView()
+            MenuBarView(openMainWindow: { appDelegate.bringMainWindowToFront() })
                 .environmentObject(state)
         }
         .menuBarExtraStyle(.window)

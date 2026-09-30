@@ -8,7 +8,6 @@ let package = Package(
         .executableTarget(
             name: "Tidy",
             path: "Sources/Tidy",
-            resources: [.copy("Resources")],
             linkerSettings: [
                 // Embeds AppPackaging/Info.plist directly into the raw
                 // executable's __TEXT,__info_plist section. Without this,

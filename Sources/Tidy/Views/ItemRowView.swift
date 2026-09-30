@@ -40,15 +40,9 @@ struct ItemRowView: View {
             Button("Clean") { onClean(item) }
                 .controlSize(.small)
                 .tint(Theme.teal)
-        case .privilegedShell:
-            Button {
-                onClean(item)
-            } label: {
-                Label("Delete…", systemImage: "lock.fill")
-            }
-            .controlSize(.small)
-            .tint(Theme.amber)
-            .help("Asks for your admin password via macOS's own prompt.")
+        case .reveal:
+            Button("Show in Finder") { onClean(item) }
+                .controlSize(.small)
         case .launchApp:
             Button("Open Uninstaller") { onClean(item) }
                 .controlSize(.small)

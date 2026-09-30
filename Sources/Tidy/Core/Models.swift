@@ -11,8 +11,11 @@ enum ItemCategory: String, Codable, CaseIterable {
     case xcodeDeviceSupport = "Xcode Device Support"
     case xcodeSimulatorRuntime = "Simulator Runtime"
     case xcodeSimulatorDevice = "Simulator Device"
+    case xcodeSimulatorCache = "Simulator Cache"
     case xcodeDerivedData = "Xcode Build Data"
     case xcodePreviews = "SwiftUI Previews"
+    case xcodeDocumentation = "Xcode Documentation"
+    case xcodeArchive = "Xcode Archive"
     case devCache = "Developer Cache"
     case appCache = "App Cache"
     case orphanedSupport = "Orphaned App Data"
@@ -24,11 +27,10 @@ enum ItemCategory: String, Codable, CaseIterable {
 /// What happens when the user asks Tidy to act on an item.
 enum ItemAction {
     case trash                      // Move path(s) to ~/.Trash
-    case command([String])          // Run a shell command (e.g. `xcrun simctl ...`)
+    case command([String])          // Run a tool by absolute path (e.g. simctl)
     case guide(String)              // Not automatable; open a URL / show instructions
-    case privilegedShell(String)    // Needs an admin password. Run via macOS's own
-                                     // authorization dialog (Touch ID/password) — Tidy
-                                     // never sees or stores the credential itself.
+    case reveal(String)             // Owned by macOS or outside Tidy's sandbox; show it
+                                     // in Finder so the user can remove it themselves.
     case launchApp(String)          // Hand off to another app's own uninstaller/GUI.
 }
 
