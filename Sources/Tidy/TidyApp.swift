@@ -18,6 +18,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     /// onboarding completing — never runs again.
     var openMainWindow: (() -> Void)?
 
+    private static let showMainWindowRequest = Notification.Name("com.prateek.tidy.showMainWindow")
+    private var observers: [NSObjectProtocol] = []
+
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        if handOffToRunningInstance() { return }
+        observeMainWindowVisibility()
+        observers.append(DistributedNotificationCenter.default().addObserver(
+            forName: Self.showMainWindowRequest, object: nil, queue: .main
+        ) { [weak self] _ in self?.bringMainWindowToFront() })
+    }
+
+    /// A second copy of Tidy (e.g. launched from Spotlight while a copy from a
+    /// different folder is running) would add a second menu bar icon. Instead,
+    /// ask the running copy to show its window and quit before any UI exists.
+    private func handOffToRunningInstance() -> Bool {
+        #if DEBUG
+        if CommandLine.arguments.contains("--render-screenshots") { return false }
+        #endif
+        let me = ProcessInfo.processInfo.processIdentifier
+        guard let bundleID = Bundle.main.bundleIdentifier,
+              let other = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+                .first(where: { $0.processIdentifier != me })
+        else { return false }
+        // No userInfo: sandboxed apps may only post distributed notifications without one.
+        DistributedNotificationCenter.default().postNotificationName(
+            Self.showMainWindowRequest, object: nil, userInfo: nil, deliverImmediately: true)
+        other.activate()
+        exit(0)
+    }
+
+    /// LSUIElement keeps Tidy out of the Dock and ⌘-Tab, which is right while it
+    /// only lives in the menu bar — but a user with the window open expects to
+    /// switch back to it. So Tidy becomes a regular app while its main window is
+    /// open and goes back to menu-bar-only when the window closes.
+    private func observeMainWindowVisibility() {
+        let center = NotificationCenter.default
+        observers.append(center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { note in
+            guard let window = note.object as? NSWindow, Self.isMainWindow(window),
+                  NSApp.activationPolicy() != .regular else { return }
+            NSApp.setActivationPolicy(.regular)
+        })
+        observers.append(center.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { note in
+            guard let closing = note.object as? NSWindow, Self.isMainWindow(closing) else { return }
+            let anotherOpen = NSApp.windows.contains { $0 !== closing && $0.isVisible && Self.isMainWindow($0) }
+            if !anotherOpen { NSApp.setActivationPolicy(.accessory) }
+        })
+    }
+
+    private static func isMainWindow(_ window: NSWindow) -> Bool {
+        window.identifier?.rawValue == "main"
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
         #if DEBUG
