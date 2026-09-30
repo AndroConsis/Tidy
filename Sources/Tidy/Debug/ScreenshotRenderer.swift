@@ -53,7 +53,7 @@ enum ScreenshotRenderer {
         }
     }
 
-    private static func capture(_ view: some View, size: NSSize, appearance: NSAppearance.Name, titled: Bool, to url: URL) async {
+    static func capture(_ view: some View, size: NSSize, appearance: NSAppearance.Name, titled: Bool, to url: URL) async {
         let style: NSWindow.StyleMask = titled ? [.titled, .closable, .miniaturizable, .resizable] : [.borderless]
         let window = NSWindow(contentRect: NSRect(origin: NSPoint(x: 80, y: 80), size: size), styleMask: style, backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
@@ -91,7 +91,7 @@ enum ScreenshotRenderer {
 /// Liquid Glass sidebar and toolbar that `cacheDisplay` can't draw. Looked up
 /// at runtime because the SDK marks CGWindowListCreateImage unavailable; a
 /// process may still capture its own windows without Screen Recording access.
-private func compositedImage(of window: NSWindow) -> CGImage? {
+func compositedImage(of window: NSWindow) -> CGImage? {
     typealias CreateImage = @convention(c) (CGRect, UInt32, CGWindowID, UInt32) -> Unmanaged<CGImage>?
     guard let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGWindowListCreateImage") else { return nil }
     let create = unsafeBitCast(symbol, to: CreateImage.self)
@@ -101,7 +101,7 @@ private func compositedImage(of window: NSWindow) -> CGImage? {
     return create(.null, includingWindow, CGWindowID(window.windowNumber), boundsIgnoreFraming | bestResolution)?.takeRetainedValue()
 }
 
-private enum SampleData {
+enum SampleData {
     static let home = "/Users/alex"
     static let gb: Double = 1_000_000_000
 

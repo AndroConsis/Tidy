@@ -34,7 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     /// ask the running copy to show its window and quit before any UI exists.
     private func handOffToRunningInstance() -> Bool {
         #if DEBUG
-        if CommandLine.arguments.contains("--render-screenshots") { return false }
+        if CommandLine.arguments.contains(where: { $0 == "--render-screenshots" || $0 == "--record-demo" }) { return false }
         #endif
         let me = ProcessInfo.processInfo.processIdentifier
         guard let bundleID = Bundle.main.bundleIdentifier,
@@ -73,7 +73,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
         #if DEBUG
-        if ScreenshotRenderer.runIfRequested() { return }
+        if ScreenshotRenderer.runIfRequested() || DemoRecorder.runIfRequested() { return }
         #endif
 
         let completedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")

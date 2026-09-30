@@ -57,8 +57,16 @@ final class AppState: ObservableObject {
         return (lastAutoCleanDate.map { Date().timeIntervalSince($0) > interval }) ?? true
     }
 
+    #if DEBUG
+    /// Demo recordings show a nearly full Mac regardless of this machine's disk.
+    @Published var debugFreeBytes: Int64?
+    #endif
+
     var freeBytes: Int64 {
-        (try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
+        #if DEBUG
+        if let debugFreeBytes { return debugFreeBytes }
+        #endif
+        return (try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
             .volumeAvailableCapacityForImportantUsage ?? 0
     }
 

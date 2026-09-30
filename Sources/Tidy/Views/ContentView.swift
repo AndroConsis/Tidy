@@ -80,6 +80,11 @@ struct ContentView: View {
                 }
         }
         .frame(minWidth: 720, minHeight: 480)
+        #if DEBUG
+        .onReceive(NotificationCenter.default.publisher(for: .demoSelectSection)) { note in
+            if let section = note.object as? Section_ { selection = section }
+        }
+        #endif
         .alert("Error", isPresented: .constant(state.lastError != nil), actions: {
             Button("OK") { state.lastError = nil }
         }, message: { Text(state.lastError ?? "") })
