@@ -20,30 +20,43 @@ struct Shot {
     var menuBar: String? = nil
 }
 
-// Captions avoid Apple trademarks as product-like terms (App Review 5.2.5)
-// and lead with everyday benefits; developer features come later.
+// Order and captions come from ASO research on Mac storage apps: reviewers
+// praise seeing where space went and quick, big wins, and complain about
+// deleting the wrong thing, subscriptions and permission hassles. So the
+// first three shots cover the win, the map and trust; developer features
+// come last. Captions avoid Apple trademarks as product-like terms (App
+// Review 5.2.5) and sample data uses fictional apps.
 let shots = [
-    Shot(file: "01-free-up-space", headline: "Free up gigabytes of space",
-         subhead: "Tidy finds the caches, leftovers and old downloads quietly filling your disk.",
+    Shot(file: "01-get-space-back", headline: "Get gigabytes back in minutes",
+         subhead: "Tidy shows what's filling your disk and clears the junk safely.",
          window: "Overview-dark", menuBar: "MenuBar-dark"),
-    Shot(file: "02-safe-or-review", headline: "Every item marked Safe or Review",
-         subhead: "Safe items clean in one click. Anything else waits for your say-so.",
+    Shot(file: "02-disk-map", headline: "See where your space went",
+         subhead: "Every folder drawn to scale, with what's safe to clean inside it.",
+         window: "DiskMap-dark", windowScale: 1.85),
+    Shot(file: "03-know-whats-safe", headline: "Know it's safe before you delete",
+         subhead: "Every item is labelled Safe or Review and explained in plain words.",
          window: "AppCaches-light"),
-    Shot(file: "03-photos-untouched", headline: "Your photos stay untouched",
-         subhead: "Tidy never deletes your photos, videos or documents.",
+    Shot(file: "04-large-files", headline: "Find the big files you forgot",
+         subhead: "Old videos, disk images and downloads, sorted by size and last opened.",
+         window: "LargeFiles-dark"),
+    Shot(file: "05-uninstall-apps", headline: "Remove apps completely",
+         subhead: "Uninstall an app along with the settings and caches it leaves behind.",
+         window: "Apps-light"),
+    Shot(file: "06-photos-stay-put", headline: "Your photos stay put",
+         subhead: "Tidy never deletes your personal files. Removals go to the Trash first.",
          window: "System-dark"),
-    Shot(file: "04-xcode", headline: "Reclaim space from Xcode",
-         subhead: "For developers: old build data, simulators and device support, sized and explained.",
-         window: "Xcode-dark", windowScale: 1.78),
-    Shot(file: "05-dev-caches", headline: "Developer caches, cleared safely",
-         subhead: "npm, Homebrew, Gradle, Yarn, CocoaPods and pip rebuild what they need.",
-         window: "DevCaches-dark"),
-    Shot(file: "06-schedule", headline: "Stays tidy on its own",
+    Shot(file: "07-old-installers", headline: "Clear old installers and leftovers",
+         subhead: "Spot installers you've already used and data from apps you deleted.",
+         window: "Installers-light"),
+    Shot(file: "08-on-autopilot", headline: "Stays tidy on its own",
          subhead: "Schedule automatic cleaning of safe items: daily, weekly or monthly.",
          window: "Settings-dark"),
-    Shot(file: "07-menu-bar", headline: "Always one click away",
-         subhead: "Lives in your menu bar. Files go to the Trash, so you can put them back.",
-         window: "Installers-dark", menuBar: "MenuBar-light"),
+    Shot(file: "09-developers", headline: "Built for developers too",
+         subhead: "Xcode, Android emulators, simulators and package caches, cleared safely.",
+         window: "Xcode-dark", windowScale: 1.78),
+    Shot(file: "10-private", headline: "No subscription. No account. No tracking.",
+         subhead: "Lives in your menu bar, and everything it finds stays on your computer.",
+         window: "Overview-light", menuBar: "MenuBar-light"),
 ]
 
 let violet = NSColor(srgbRed: 0x8B / 255, green: 0x5C / 255, blue: 0xF6 / 255, alpha: 1)

@@ -174,7 +174,7 @@ struct AppRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(nsImage: NSWorkspace.shared.icon(forFile: app.url.path))
+            Image(nsImage: UninstallerModule.icon(for: app))
                 .resizable().frame(width: 32, height: 32)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
@@ -224,7 +224,7 @@ struct UninstallSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
-                Image(nsImage: NSWorkspace.shared.icon(forFile: app.url.path)).resizable().frame(width: 48, height: 48)
+                Image(nsImage: UninstallerModule.icon(for: app)).resizable().frame(width: 48, height: 48)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Uninstall \(app.name)?").font(.system(size: 16, weight: .semibold, design: .rounded))
                     Text("Everything ticked below goes to the Trash, so you can put it back until you empty it.")

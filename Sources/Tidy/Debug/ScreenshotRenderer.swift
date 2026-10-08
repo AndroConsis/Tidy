@@ -27,6 +27,7 @@ enum ScreenshotRenderer {
         state.recentActions = SampleData.recentActions
         state.lastScanDate = Date().addingTimeInterval(-90)
         state.hasCompletedOnboarding = true
+        state.debugFreeBytes = Int64(18.6 * SampleData.gb)
         SampleData.fillFeatureModels(state)
 
         // Raw capture names stay the same as before the sidebar was grouped,
@@ -42,7 +43,7 @@ enum ScreenshotRenderer {
             ("AppCaches", .junk, .appCaches, NSSize(width: 1100, height: 480)),
             ("Installers", .junk, .installers, NSSize(width: 1100, height: 420)),
             ("Trash", .junk, .trash, NSSize(width: 1100, height: 480)),
-            ("System", .junk, .system, NSSize(width: 1100, height: 460)),
+            ("System", .junk, .system, NSSize(width: 1100, height: 400)),
             ("Settings", .settings, nil, NSSize(width: 1100, height: 760)),
         ]
         NSApp.activate(ignoringOtherApps: true)
@@ -180,9 +181,9 @@ enum SampleData {
                  "Dependency/build folder in a project untouched for 214 days. Reinstall with your package manager if you come back to it.", daysAgo: 214),
         ]
         r.appCaches = [
-            item("com.spotify.client", "\(home)/Library/Caches/com.spotify.client", 1.38, .regenerable, .appCache, "App cache folder. macOS and the app rebuild caches automatically as needed."),
-            item("com.tinyspeck.slackmacgap", "\(home)/Library/Caches/com.tinyspeck.slackmacgap", 0.72, .regenerable, .appCache, "App cache folder. macOS and the app rebuild caches automatically as needed."),
-            item("com.figma.Desktop", "\(home)/Library/Caches/com.figma.Desktop", 0.46, .regenerable, .appCache, "App cache folder. macOS and the app rebuild caches automatically as needed."),
+            item("com.streamly.player", "\(home)/Library/Caches/com.streamly.player", 1.38, .regenerable, .appCache, "App cache folder. macOS and the app rebuild caches automatically as needed."),
+            item("com.chatwave.desktop", "\(home)/Library/Caches/com.chatwave.desktop", 0.72, .regenerable, .appCache, "App cache folder. macOS and the app rebuild caches automatically as needed."),
+            item("com.canvasly.app", "\(home)/Library/Caches/com.canvasly.app", 0.46, .regenerable, .appCache, "App cache folder. macOS and the app rebuild caches automatically as needed."),
             item("com.lumenlabs.PhotoLab", "\(home)/Library/Application Support/com.lumenlabs.PhotoLab", 0.92, .review, .orphanedSupport,
                  "Leftover data for an app that's no longer installed (bundle ID com.lumenlabs.PhotoLab not found)."),
         ]
@@ -191,11 +192,16 @@ enum SampleData {
             sizeBytes: 0, lastModified: nil, safety: .personal, category: .system,
             explanation: "If iCloud Photos is on, turn on \"Optimize Mac Storage\" in Photos > Settings > iCloud instead of deleting anything. Full-size originals stay in iCloud and download on demand.",
             action: .guide("x-apple.systempreferences:com.apple.Photos-Settings.extension")
+        ), CleanableItem(
+            name: "3 local Time Machine snapshots", path: "", paths: [],
+            sizeBytes: 0, lastModified: nil, safety: .personal, category: .system,
+            explanation: "macOS manages these automatically and purges them when space runs low. Tidy won't remove them, since one may be your only local restore point.",
+            action: .guide("")
         )]
         r.installers = [
-            item("Xcode_16.2.xip", "\(home)/Downloads/Xcode_16.2.xip", 3.12, .review, .installer, "Looks like the installer for Xcode, which is already installed. The installer itself isn't needed anymore."),
-            item("Docker.dmg", "\(home)/Downloads/Docker.dmg", 0.61, .review, .installer, "Looks like the installer for Docker, which is already installed. The installer itself isn't needed anymore."),
-            item("googlechrome.dmg", "\(home)/Downloads/googlechrome.dmg", 0.23, .review, .installer, "Downloaded installer, untouched for 74 days."),
+            item("StudioSuite-2025-Installer.dmg", "\(home)/Downloads/StudioSuite-2025-Installer.dmg", 3.12, .review, .installer, "Looks like the installer for Studio Suite, which is already installed. The installer itself isn't needed anymore."),
+            item("PixelForge-4.2.dmg", "\(home)/Downloads/PixelForge-4.2.dmg", 0.61, .review, .installer, "Looks like the installer for PixelForge, which is already installed. The installer itself isn't needed anymore."),
+            item("Meetly-Setup.pkg", "\(home)/Downloads/Meetly-Setup.pkg", 0.23, .review, .installer, "Downloaded installer, untouched for 74 days."),
         ]
         return r
     }
@@ -210,10 +216,10 @@ enum SampleData {
         }
         state.largeFiles.files = [
             file("Movies/Iceland trip raw footage.mov", 18.4, opened: 410, added: 430, kind: "QuickTime movie"),
-            file("Downloads/ubuntu-24.04-desktop-arm64.iso", 6.1, opened: nil, added: 220, kind: "Disk Image"),
+            file("Downloads/linux-desktop-arm64.iso", 6.1, opened: nil, added: 220, kind: "Disk Image"),
             file("Documents/Backups/old-laptop-backup.zip", 4.7, opened: 600, added: 610, kind: "ZIP archive", iCloud: true),
             file("Desktop/Screen Recording 2026-03-14.mov", 2.9, opened: 205, added: 208, kind: "QuickTime movie"),
-            file("Downloads/Final Cut sample media.zip", 1.8, opened: nil, added: 96, kind: "ZIP archive"),
+            file("Downloads/Course sample media.zip", 1.8, opened: nil, added: 96, kind: "ZIP archive"),
             file("Music/Podcast masters/Episode 12 master.wav", 1.2, opened: 30, added: 40, kind: "Waveform audio"),
             file("Movies/Wedding slideshow export.mp4", 0.9, opened: 12, added: 300, kind: "MPEG-4 movie"),
         ]
@@ -236,7 +242,9 @@ enum SampleData {
         root.otherSize = Int64(2.4 * gb)
         root.otherCount = 38
         state.diskMap.root = root
-        state.diskMap.overview = DiskMapModule.Overview(total: Int64(494 * gb), free: Int64(41 * gb), apps: Int64(38 * gb), home: root.size)
+        state.diskMap.overview = DiskMapModule.Overview(total: Int64(494 * gb), free: Int64(18.6 * gb), apps: Int64(38 * gb), home: root.size)
+        // Everyday story: the Downloads folder, with old installers to clear.
+        state.diskMap.selected = root.children?.first { $0.name == "Downloads" }
 
         func app(_ name: String, _ gigabytes: Double, opened: Double?, version: String) -> UninstallerModule.InstalledApp {
             var a = UninstallerModule.InstalledApp(url: URL(fileURLWithPath: "/Applications/\(name).app"), name: name, bundleName: name,
@@ -252,11 +260,34 @@ enum SampleData {
             app("Tunebox", 0.38, opened: 75, version: "1.9"), app("Sketchpad", 0.21, opened: nil, version: "2.0"),
         ]
         state.uninstaller.hasLoaded = true
+        let iconStyles: [(String, NSColor, NSColor)] = [
+            ("film.stack.fill", .systemIndigo, .systemPurple), ("paintbrush.pointed.fill", .systemOrange, .systemPink),
+            ("video.fill", .systemTeal, .systemBlue), ("book.closed.fill", .systemYellow, .systemOrange),
+            ("music.note", .systemPink, .systemRed), ("pencil.and.scribble", .systemGreen, .systemTeal),
+        ]
+        for (app, style) in zip(state.uninstaller.apps, iconStyles) {
+            UninstallerModule.sampleIcons[app.url] = sampleIcon(symbol: style.0, from: style.1, to: style.2)
+        }
+    }
+
+    /// A simple macOS-style app icon: a rounded gradient square with a symbol.
+    static func sampleIcon(symbol: String, from: NSColor, to: NSColor) -> NSImage {
+        NSImage(size: NSSize(width: 128, height: 128), flipped: false) { rect in
+            let tile = rect.insetBy(dx: 12, dy: 12)
+            let path = NSBezierPath(roundedRect: tile, xRadius: 24, yRadius: 24)
+            NSGradient(starting: from, ending: to)?.draw(in: path, angle: -60)
+            if let glyph = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
+                .withSymbolConfiguration(.init(pointSize: 50, weight: .semibold).applying(.init(paletteColors: [.white]))) {
+                let size = glyph.size
+                glyph.draw(in: NSRect(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2, width: size.width, height: size.height))
+            }
+            return true
+        }
     }
 
     static var recentActions: [LogEntry] {
-        [("npm cache", 2.1, 0.2), ("Homebrew download cache", 1.6, 2), ("Weatherly build data", 4.8, 3),
-         ("iOS iPhone14,5 16.4 (20E247)", 3.7, 9), ("com.spotify.client", 1.1, 12)]
+        [("Uninstalled Studio Suite", 6.4, 0.2), ("Old installers", 3.1, 2), ("com.streamly.player", 1.4, 3),
+         ("Leftovers of PhotoLab", 0.9, 9), ("Weatherly build data", 4.8, 12)]
             .map { name, size, daysAgo in
                 LogEntry(date: Date().addingTimeInterval(-daysAgo * 86_400), name: name, paths: [], sizeBytes: Int64(size * gb), category: "")
             }

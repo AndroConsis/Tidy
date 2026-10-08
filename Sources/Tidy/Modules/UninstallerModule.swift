@@ -95,6 +95,18 @@ enum UninstallerModule {
         return inHomeApplications || hasApplicationsAccess ? .direct : .needsAccess
     }
 
+    #if DEBUG
+    /// Screenshot mode's fictional apps have no bundle on disk to take an icon from.
+    nonisolated(unsafe) static var sampleIcons: [URL: NSImage] = [:]
+    #endif
+
+    static func icon(for app: InstalledApp) -> NSImage {
+        #if DEBUG
+        if let icon = sampleIcons[app.url] { return icon }
+        #endif
+        return NSWorkspace.shared.icon(forFile: app.url.path)
+    }
+
     static func isRunning(_ app: InstalledApp) -> Bool {
         !NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleID).isEmpty
     }
