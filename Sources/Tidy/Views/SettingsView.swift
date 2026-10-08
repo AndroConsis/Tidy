@@ -108,7 +108,7 @@ struct SettingsView: View {
                         Image(systemName: "info.circle").foregroundStyle(.secondary)
                         Text("How Tidy stays safe").font(.system(size: 14, weight: .semibold, design: .rounded))
                     }
-                    bullet("Tidy only scans the fixed list of paths built into each module — never a free filesystem walk.")
+                    bullet("Automatic scans only look at a fixed list of known cache and build locations. Large Files and Disk Map look through your Home folder only when you start them.")
                     bullet("Every removal defaults to the Trash (Finder \u{201C}Put Back\u{201D} restores it) and is logged in Overview \u{2192} Recent Activity.")
                     bullet("Photos, Mail, Messages and your Trash are never touched automatically — Tidy only points you at the right Settings toggle.")
                     bullet("Tidy never asks for your admin password. Anything owned by macOS is shown in Finder for you to remove yourself.")

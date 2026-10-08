@@ -97,7 +97,7 @@ private struct SafetyStep: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 bullet("Every removal defaults to the Trash — Finder's \u{201C}Put Back\u{201D} restores it.")
-                bullet("Only fixed, allowlisted paths are ever scanned — never a free filesystem walk.")
+                bullet("Automatic scans only check known cache and build locations. Large Files and Disk Map search your Home folder only when you ask.")
                 bullet("Every action is logged in Overview \u{2192} Recent Activity.")
             }
             .padding(.top, 4)

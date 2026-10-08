@@ -24,6 +24,7 @@ enum ItemCategory: String, Codable, CaseIterable {
     case orphanedSupport = "Orphaned App Data"
     case installer = "Downloaded Installer"
     case unusedApp = "Unused Application"
+    case largeFile = "Large File"
     case system = "System"
 }
 

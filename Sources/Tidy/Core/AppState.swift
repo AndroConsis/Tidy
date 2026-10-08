@@ -9,6 +9,7 @@ final class AppState: ObservableObject {
     @Published var lastScanDate: Date?
     @Published var lastError: String?
     @Published var recentActions: [LogEntry] = ActionLog.read()
+    let largeFiles = LargeFilesModel()
 
     // Auto-clean settings, persisted in UserDefaults. Only ever touches
     // .regenerable ("SAFE") items — REVIEW and MANUAL items always require
