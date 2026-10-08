@@ -510,7 +510,6 @@ struct TreemapView: View {
                 if cleanableBytes > 0 {
                     shape.strokeBorder(Neon.energy, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4], dashPhase: pulse ? 20 : 0))
                         .opacity(pulse ? 0.95 : 0.45)
-                        .neonGlow(Neon.energy, radius: 6)
                         .padding(3)
                 }
                 if rect.width > 70 && rect.height > 34 {
@@ -525,11 +524,10 @@ struct TreemapView: View {
                         if cleanableBytes > 0 && rect.height > 70 && rect.width > 120 {
                             Label(ByteCountFormatter.string(fromByteCount: cleanableBytes, countStyle: .file) + " CLEANABLE",
                                   systemImage: "bolt.fill")
-                                .font(Neon.mono(9, .bold))
-                                .foregroundStyle(Neon.energy)
-                                .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(Capsule().fill(Color.black.opacity(0.55)))
-                                .overlay(Capsule().strokeBorder(Neon.energy.opacity(0.8), lineWidth: 1))
+                                .font(Neon.mono(10, .heavy))
+                                .foregroundStyle(Color(hex: 0x1A1200))
+                                .padding(.horizontal, 7).padding(.vertical, 3)
+                                .background(Capsule().fill(Neon.energy))
                                 .padding(.top, 2)
                         }
                     }
