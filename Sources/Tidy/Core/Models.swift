@@ -16,6 +16,9 @@ enum ItemCategory: String, Codable, CaseIterable {
     case xcodePreviews = "SwiftUI Previews"
     case xcodeDocumentation = "Xcode Documentation"
     case xcodeArchive = "Xcode Archive"
+    case androidEmulator = "Android Emulator"
+    case androidSystemImage = "Android System Image"
+    case androidCache = "Android Cache"
     case devCache = "Developer Cache"
     case appCache = "App Cache"
     case orphanedSupport = "Orphaned App Data"
@@ -55,6 +58,7 @@ struct ScanResult {
     var xcodeDeviceSupport: [CleanableItem] = []
     var xcodeSimulators: [CleanableItem] = []
     var xcodeBuildData: [CleanableItem] = []
+    var android: [CleanableItem] = []
     var devCaches: [CleanableItem] = []
     var appCaches: [CleanableItem] = []
     var installers: [CleanableItem] = []
@@ -62,7 +66,7 @@ struct ScanResult {
     var system: [CleanableItem] = []
 
     var all: [CleanableItem] {
-        xcodeDeviceSupport + xcodeSimulators + xcodeBuildData + devCaches + appCaches + installers + unusedApps + system
+        xcodeDeviceSupport + xcodeSimulators + xcodeBuildData + android + devCaches + appCaches + installers + unusedApps + system
     }
 
     var reclaimableBytes: Int64 {

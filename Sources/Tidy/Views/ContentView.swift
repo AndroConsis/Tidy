@@ -3,6 +3,7 @@ import SwiftUI
 enum Section_: String, CaseIterable, Identifiable {
     case overview = "Overview"
     case xcode = "Xcode"
+    case android = "Android"
     case devCaches = "Dev Caches"
     case appCaches = "App Caches"
     case installers = "Installers"
@@ -15,6 +16,7 @@ enum Section_: String, CaseIterable, Identifiable {
         switch self {
         case .overview: return "gauge.with.dots.needle.67percent"
         case .xcode: return "hammer.fill"
+        case .android: return "smartphone"
         case .devCaches: return "shippingbox.fill"
         case .appCaches: return "internaldrive.fill"
         case .installers: return "arrow.down.circle.fill"
@@ -30,6 +32,7 @@ enum Section_: String, CaseIterable, Identifiable {
         switch self {
         case .overview: return Theme.violet
         case .xcode: return .indigo
+        case .android: return .green
         case .devCaches: return .orange
         case .appCaches: return .pink
         case .installers: return .blue
@@ -95,6 +98,7 @@ struct ContentView: View {
         switch selection ?? .overview {
         case .overview: OverviewView()
         case .xcode: CategoryListView(title: "Xcode", items: state.result.xcodeDeviceSupport + state.result.xcodeSimulators + state.result.xcodeBuildData)
+        case .android: CategoryListView(title: "Android", items: state.result.android)
         case .devCaches: CategoryListView(title: "Dev Caches", items: state.result.devCaches)
         case .appCaches: CategoryListView(title: "App Caches", items: state.result.appCaches)
         case .installers: CategoryListView(title: "Installers", items: state.result.installers)

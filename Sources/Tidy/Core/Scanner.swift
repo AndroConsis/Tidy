@@ -19,6 +19,10 @@ enum Scanner {
                     + XcodeModule.scanDocumentation()
                     + XcodeModule.scanArchives()
 
+                result.android = AndroidModule.scanEmulators()
+                    + AndroidModule.scanUnusedSystemImages()
+                    + AndroidModule.scanCaches()
+
                 result.devCaches = DevCachesModule.scan()
                     + DevCachesModule.scanStaleProjectArtifacts(under: [
                         FSUtil.home.appendingPathComponent("Projects").path

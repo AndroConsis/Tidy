@@ -126,9 +126,11 @@ final class AppState: ObservableObject {
         result.xcodeDeviceSupport.removeAll { $0.id == item.id }
         result.xcodeSimulators.removeAll { $0.id == item.id }
         result.xcodeBuildData.removeAll { $0.id == item.id }
+        result.android.removeAll { $0.id == item.id }
         result.devCaches.removeAll { $0.id == item.id }
         result.appCaches.removeAll { $0.id == item.id }
         result.installers.removeAll { $0.id == item.id }
         result.unusedApps.removeAll { $0.id == item.id }
+        result.system.removeAll { $0.id == item.id }
     }
 }
