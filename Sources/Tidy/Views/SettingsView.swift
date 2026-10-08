@@ -78,6 +78,31 @@ struct SettingsView: View {
                 .padding(16)
                 .background(Theme.cardBackground())
 
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "heart")
+                            .font(.system(size: 18))
+                            .foregroundStyle(Theme.accentGradient)
+                        Text("Feedback").font(.system(size: 16, weight: .semibold, design: .rounded))
+                    }
+                    Text("Found a bug, or something Tidy should clean? Tell us. If Tidy has helped, a rating on the App Store helps others find it.")
+                        .font(.system(size: 12)).foregroundStyle(.secondary)
+                    HStack(spacing: 10) {
+                        Button {
+                            Feedback.sendFeedback()
+                        } label: {
+                            Label("Send Feedback…", systemImage: "envelope")
+                        }
+                        Button {
+                            Feedback.openWriteReview()
+                        } label: {
+                            Label("Rate Tidy on the App Store", systemImage: "star")
+                        }
+                    }
+                }
+                .padding(16)
+                .background(Theme.cardBackground())
+
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Image(systemName: "info.circle").foregroundStyle(.secondary)

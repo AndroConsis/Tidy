@@ -80,8 +80,9 @@ final class AppState: ObservableObject {
 
     func clean(_ item: CleanableItem) {
         do {
-            _ = try Cleaner.clean(item)
+            let freed = try Cleaner.clean(item)
             recentActions = ActionLog.read()
+            Feedback.requestReviewIfEarned(freedBytes: freed)
             // launchApp and reveal hand off to another app or to Finder —
             // nothing is removed yet, so keep the row until the next rescan.
             switch item.action {
@@ -94,7 +95,7 @@ final class AppState: ObservableObject {
     }
 
     @discardableResult
-    func cleanAllRegenerable() -> Int64 {
+    func cleanAllRegenerable(userInitiated: Bool = true) -> Int64 {
         let targets = result.all.filter { $0.safety == .regenerable }
         var freed: Int64 = 0
         for item in targets {
@@ -105,6 +106,7 @@ final class AppState: ObservableObject {
             }
         }
         recentActions = ActionLog.read()
+        if userInitiated { Feedback.requestReviewIfEarned(freedBytes: freed) }
         Task { await scan() }
         return freed
     }
@@ -113,7 +115,7 @@ final class AppState: ObservableObject {
     /// turned auto-clean on and the configured interval has elapsed.
     func runScheduledAutoCleanIfDue() {
         guard isAutoCleanDue, result.safeAutoCleanBytes > 0 else { return }
-        let freed = cleanAllRegenerable()
+        let freed = cleanAllRegenerable(userInitiated: false)
         lastAutoCleanDate = Date()
         if freed > 0 {
             Notifier.notifyAutoClean(bytes: freed)
