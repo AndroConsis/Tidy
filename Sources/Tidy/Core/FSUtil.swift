@@ -47,7 +47,9 @@ enum FSUtil {
     /// Real on-disk size of a file or directory, in bytes.
     /// Does NOT follow into a different mounted volume (so a mounted
     /// simulator .dmg image isn't double-counted against its host size).
-    static func size(of url: URL) -> Int64 {
+    /// Pass `includingPackages` to count inside nested bundles too (an app's
+    /// helpers and plug-ins), e.g. when sizing a whole app.
+    static func size(of url: URL, includingPackages: Bool = false) -> Int64 {
         var isDir: ObjCBool = false
         guard fm.fileExists(atPath: url.path, isDirectory: &isDir) else { return 0 }
         if !isDir.boolValue {
@@ -60,7 +62,7 @@ enum FSUtil {
         guard let enumerator = fm.enumerator(
             at: url,
             includingPropertiesForKeys: keys,
-            options: [.skipsPackageDescendants],
+            options: includingPackages ? [] : [.skipsPackageDescendants],
             errorHandler: { _, _ in true }
         ) else { return 0 }
 

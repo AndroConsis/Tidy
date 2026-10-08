@@ -11,6 +11,7 @@ final class AppState: ObservableObject {
     @Published var recentActions: [LogEntry] = ActionLog.read()
     let largeFiles = LargeFilesModel()
     let diskMap = DiskMapModel()
+    let uninstaller = UninstallerModel()
 
     // Auto-clean settings, persisted in UserDefaults. Only ever touches
     // .regenerable ("SAFE") items — REVIEW and MANUAL items always require

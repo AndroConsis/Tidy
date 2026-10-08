@@ -25,6 +25,7 @@ enum ItemCategory: String, Codable, CaseIterable {
     case installer = "Downloaded Installer"
     case unusedApp = "Unused Application"
     case largeFile = "Large File"
+    case uninstalledApp = "Uninstalled App"
     case system = "System"
 }
 

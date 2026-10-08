@@ -4,6 +4,7 @@ enum Section_: String, CaseIterable, Identifiable {
     case overview = "Overview"
     case diskMap = "Disk Map"
     case largeFiles = "Large Files"
+    case uninstaller = "Uninstaller"
     case xcode = "Xcode"
     case android = "Android"
     case devCaches = "Dev Caches"
@@ -19,6 +20,7 @@ enum Section_: String, CaseIterable, Identifiable {
         case .overview: return "gauge.with.dots.needle.67percent"
         case .diskMap: return "square.grid.3x3.square"
         case .largeFiles: return "doc.text.magnifyingglass"
+        case .uninstaller: return "trash.square.fill"
         case .xcode: return "hammer.fill"
         case .android: return "smartphone"
         case .devCaches: return "shippingbox.fill"
@@ -37,6 +39,7 @@ enum Section_: String, CaseIterable, Identifiable {
         case .overview: return Theme.violet
         case .diskMap: return .blue
         case .largeFiles: return .purple
+        case .uninstaller: return .red
         case .xcode: return .indigo
         case .android: return .green
         case .devCaches: return .orange
@@ -59,6 +62,7 @@ enum Section_: String, CaseIterable, Identifiable {
         case .installer: return .installers
         case .unusedApp: return .unusedApps
         case .largeFile: return .largeFiles
+        case .uninstalledApp: return .uninstaller
         case .system: return .system
         }
     }
@@ -120,6 +124,7 @@ struct ContentView: View {
         case .overview: OverviewView()
         case .diskMap: DiskMapView(model: state.diskMap, openSection: { selection = $0 })
         case .largeFiles: LargeFilesView(model: state.largeFiles)
+        case .uninstaller: UninstallerView(model: state.uninstaller)
         case .xcode: CategoryListView(title: "Xcode", items: state.result.xcodeDeviceSupport + state.result.xcodeSimulators + state.result.xcodeBuildData)
         case .android: CategoryListView(title: "Android", items: state.result.android)
         case .devCaches: CategoryListView(title: "Dev Caches", items: state.result.devCaches)

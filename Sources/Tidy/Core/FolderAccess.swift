@@ -9,12 +9,56 @@ final class FolderAccess: ObservableObject {
     static let shared = FolderAccess()
 
     @Published private(set) var hasHomeAccess = false
+    /// Needed only to move apps to the Trash from the Uninstaller; Tidy can
+    /// list apps without it.
+    @Published private(set) var hasApplicationsAccess = false
 
     private let bookmarkKey = "homeFolderBookmark"
+    private let applicationsBookmarkKey = "applicationsFolderBookmark"
     private var accessedURL: URL?
+    private var applicationsURL: URL?
+    static let applicationsFolder = URL(fileURLWithPath: "/Applications", isDirectory: true)
 
     private init() {
         restore()
+        restoreApplications()
+    }
+
+    /// Shows the Open panel pointed at /Applications so the Uninstaller can
+    /// move apps the user chooses to the Trash.
+    @discardableResult
+    func requestApplicationsAccess() -> Bool {
+        let panel = NSOpenPanel()
+        panel.message = "To move apps you choose to the Trash, Tidy needs access to your Applications folder. Click Grant Access without changing the selection."
+        panel.prompt = "Grant Access"
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = false
+        panel.directoryURL = Self.applicationsFolder
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK, let url = panel.url,
+              url.standardizedFileURL.path == Self.applicationsFolder.path else { return false }
+        guard let data = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil) else { return false }
+        UserDefaults.standard.set(data, forKey: applicationsBookmarkKey)
+        applicationsURL?.stopAccessingSecurityScopedResource()
+        hasApplicationsAccess = url.startAccessingSecurityScopedResource()
+        applicationsURL = hasApplicationsAccess ? url : nil
+        return hasApplicationsAccess
+    }
+
+    private func restoreApplications() {
+        guard let data = UserDefaults.standard.data(forKey: applicationsBookmarkKey) else { return }
+        var isStale = false
+        guard let url = try? URL(resolvingBookmarkData: data, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &isStale) else {
+            UserDefaults.standard.removeObject(forKey: applicationsBookmarkKey)
+            return
+        }
+        if isStale, let fresh = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil) {
+            UserDefaults.standard.set(fresh, forKey: applicationsBookmarkKey)
+        }
+        hasApplicationsAccess = url.startAccessingSecurityScopedResource()
+        applicationsURL = hasApplicationsAccess ? url : nil
     }
 
     /// Shows the Open panel pointed at the user's home folder. Returns true
