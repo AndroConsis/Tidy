@@ -154,8 +154,8 @@ private struct PermissionsStep: View {
                 icon: "folder.badge.gearshape",
                 title: "Home folder",
                 detail: folderAccess.hasHomeAccess
-                    ? "Granted — Tidy can look at the caches and build data in your Home folder."
-                    : "Needed for almost everything Tidy finds (Xcode data, developer and app caches). macOS asks you to confirm by choosing the folder — it's already selected, just click Grant Access.",
+                    ? "Granted."
+                    : "Needed to find caches and junk. It's preselected, just click Grant Access.",
                 granted: folderAccess.hasHomeAccess,
                 actionTitle: folderAccess.hasHomeAccess ? "Granted" : "Choose…"
             ) {
@@ -166,8 +166,8 @@ private struct PermissionsStep: View {
                 icon: "bell.badge",
                 title: "Notifications",
                 detail: notificationStatus == .authorized
-                    ? "Granted — Tidy will let you know when space is worth reclaiming."
-                    : "Lets Tidy notify you when it finds real space to reclaim, or finishes a scheduled clean.",
+                    ? "Granted."
+                    : "Tells you when there's space to free, or a scheduled clean finishes.",
                 granted: notificationStatus == .authorized,
                 actionTitle: notificationStatus == .authorized ? "Granted" : "Allow"
             ) {

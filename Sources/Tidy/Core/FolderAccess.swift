@@ -29,7 +29,7 @@ final class FolderAccess: ObservableObject {
     @discardableResult
     func requestApplicationsAccess() -> Bool {
         let panel = NSOpenPanel()
-        panel.message = "To move apps you choose to the Trash, Tidy needs access to your Applications folder. Click Grant Access without changing the selection."
+        panel.message = "Tidy needs your Applications folder to remove apps you choose. Just click Grant Access."
         panel.prompt = "Grant Access"
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
@@ -66,7 +66,7 @@ final class FolderAccess: ObservableObject {
     @discardableResult
     func requestHomeAccess() -> Bool {
         let panel = NSOpenPanel()
-        panel.message = "Tidy needs access to your Home folder to find caches and build data. Click Grant Access without changing the selection."
+        panel.message = "Tidy needs your Home folder to find caches and junk. Just click Grant Access."
         panel.prompt = "Grant Access"
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
@@ -79,7 +79,7 @@ final class FolderAccess: ObservableObject {
         guard url.standardizedFileURL.path == FSUtil.home.standardizedFileURL.path else {
             let alert = NSAlert()
             alert.messageText = "Please choose your Home folder"
-            alert.informativeText = "Tidy scans fixed places inside \(FSUtil.home.path). Choose that folder itself (it was preselected) so every scan can reach them."
+            alert.informativeText = "Choose \(FSUtil.home.lastPathComponent) (it's already selected) and click Grant Access."
             alert.runModal()
             return false
         }

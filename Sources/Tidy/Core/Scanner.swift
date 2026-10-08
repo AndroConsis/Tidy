@@ -34,7 +34,6 @@ enum Scanner {
                     + AppCachesModule.scanOrphanedSupport(installedBundleIDs: installedIDs)
 
                 result.installers = InstallersModule.scan()
-                result.unusedApps = UnusedAppsModule.scan()
                 result.system = SystemModule.scan()
 
                 continuation.resume(returning: result)

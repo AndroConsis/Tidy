@@ -27,8 +27,8 @@ enum DemoRecorder {
         return true
     }
 
-    private static func select(_ section: Section_) {
-        NotificationCenter.default.post(name: .demoSelectSection, object: section)
+    private static func select(_ section: Section_, _ tab: SubTab? = nil) {
+        NotificationCenter.default.post(name: .demoSelectSection, object: tab.map { (section, $0) } ?? section)
     }
 
     /// What "Clean all safe items" would do, without touching the disk.
@@ -96,11 +96,11 @@ enum DemoRecorder {
         writer.startSession(atSourceTime: .zero)
 
         var events: [(Double, () -> Void)] = [
-            (3.0, { select(.xcode) }),
-            (8.0, { select(.devCaches) }),
+            (3.0, { select(.developer, .xcode) }),
+            (8.0, { select(.developer, .packageCaches) }),
             (12.0, { select(.overview) }),
             (14.2, { simulateClean(state) }),
-            (18.5, { select(.system) }),
+            (18.5, { select(.junk, .system) }),
         ]
         let start = CACurrentMediaTime()
         var frame = 0

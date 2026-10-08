@@ -10,6 +10,20 @@ import SwiftUI
 enum ScreenshotRenderer {
     static func runIfRequested() -> Bool {
         let args = CommandLine.arguments
+        // `--probe-access <file>`: records which folders the sandbox lets Tidy read.
+        if let flag = args.firstIndex(of: "--probe-access"), args.count > flag + 1 {
+            _ = FolderAccess.shared
+            var lines = ["home access: \(FolderAccess.shared.hasHomeAccess)"]
+            for folder in [".Trash", "Desktop", "Documents", "Downloads", "Library/Caches"] {
+                let url = FSUtil.home.appendingPathComponent(folder)
+                do {
+                    let n = try FileManager.default.contentsOfDirectory(atPath: url.path).count
+                    lines.append("\(folder): readable, \(n) entries")
+                } catch { lines.append("\(folder): \(error.localizedDescription)") }
+            }
+            try? lines.joined(separator: "\n").write(toFile: args[flag + 1], atomically: true, encoding: .utf8)
+            exit(0)
+        }
         guard let flag = args.firstIndex(of: "--render-screenshots"), args.count > flag + 1 else { return false }
         let outDir = URL(fileURLWithPath: args[flag + 1], isDirectory: true)
         try? FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
@@ -29,28 +43,30 @@ enum ScreenshotRenderer {
         state.hasCompletedOnboarding = true
         SampleData.fillFeatureModels(state)
 
-        let sizes: [Section_: NSSize] = [
-            .overview: NSSize(width: 1100, height: 560),
-            .xcode: NSSize(width: 1180, height: 800),
-            .devCaches: NSSize(width: 1100, height: 580),
-            .appCaches: NSSize(width: 1100, height: 440),
-            .installers: NSSize(width: 1100, height: 380),
-            .system: NSSize(width: 1100, height: 420),
-            .settings: NSSize(width: 1100, height: 720),
-            .android: NSSize(width: 1100, height: 520),
-            .largeFiles: NSSize(width: 1100, height: 640),
-            .diskMap: NSSize(width: 1100, height: 720),
-            .uninstaller: NSSize(width: 1100, height: 600),
+        // Raw capture names stay the same as before the sidebar was grouped,
+        // so Marketing/compose.swift keeps working.
+        let shots: [(String, Section_, SubTab?, NSSize)] = [
+            ("Overview", .overview, nil, NSSize(width: 1100, height: 560)),
+            ("DiskMap", .diskMap, nil, NSSize(width: 1200, height: 720)),
+            ("LargeFiles", .largeFiles, nil, NSSize(width: 1100, height: 640)),
+            ("Apps", .apps, nil, NSSize(width: 1100, height: 600)),
+            ("Xcode", .developer, .xcode, NSSize(width: 1180, height: 820)),
+            ("Android", .developer, .android, NSSize(width: 1100, height: 560)),
+            ("DevCaches", .developer, .packageCaches, NSSize(width: 1100, height: 620)),
+            ("AppCaches", .junk, .appCaches, NSSize(width: 1100, height: 480)),
+            ("Installers", .junk, .installers, NSSize(width: 1100, height: 420)),
+            ("Trash", .junk, .trash, NSSize(width: 1100, height: 480)),
+            ("System", .junk, .system, NSSize(width: 1100, height: 460)),
+            ("Settings", .settings, nil, NSSize(width: 1100, height: 760)),
         ]
         NSApp.activate(ignoringOtherApps: true)
         for appearance in [NSAppearance.Name.darkAqua, .aqua] {
             let suffix = appearance == .darkAqua ? "dark" : "light"
             let only = ProcessInfo.processInfo.environment["TIDY_RENDER_ONLY"]
-            for section in [Section_.overview, .diskMap, .largeFiles, .uninstaller, .xcode, .android, .devCaches, .appCaches, .installers, .system, .settings]
-                where only == nil || only == section.rawValue {
-                let view = ContentView(initialSelection: section).environmentObject(state)
-                await capture(view, size: sizes[section]!, appearance: appearance, titled: true,
-                              to: dir.appendingPathComponent("\(section.id.replacingOccurrences(of: " ", with: ""))-\(suffix).png"))
+            for (name, section, tab, size) in shots where only == nil || only == name {
+                let view = ContentView(initialSelection: section, initialTab: tab).environmentObject(state)
+                await capture(view, size: size, appearance: appearance, titled: true,
+                              to: dir.appendingPathComponent("\(name)-\(suffix).png"))
             }
             let menu = MenuBarView(openMainWindow: {})
                 .environmentObject(state)
@@ -250,6 +266,9 @@ enum SampleData {
             app("Tunebox", 0.38, opened: 75, version: "1.9"), app("Sketchpad", 0.21, opened: nil, version: "2.0"),
         ]
         state.uninstaller.hasLoaded = true
+        state.trash.isSample = true
+        state.trash.sizeBytes = Int64(3.4 * gb)
+        state.trash.itemCount = 128
     }
 
     static var recentActions: [LogEntry] {

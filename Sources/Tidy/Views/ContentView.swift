@@ -1,33 +1,28 @@
 import SwiftUI
 
+/// Sidebar destinations. Related scans share one destination and are split
+/// into tabs inside it, so the sidebar stays short.
 enum Section_: String, CaseIterable, Identifiable {
     case overview = "Overview"
     case diskMap = "Disk Map"
     case largeFiles = "Large Files"
-    case uninstaller = "Uninstaller"
-    case xcode = "Xcode"
-    case android = "Android"
-    case devCaches = "Dev Caches"
-    case appCaches = "App Caches"
-    case installers = "Installers"
-    case unusedApps = "Unused Apps"
-    case system = "System"
+    case junk = "Junk Files"
+    case developer = "Developer"
+    case apps = "Apps"
     case settings = "Settings"
     var id: String { rawValue }
+
+    static let storage: [Section_] = [.overview, .diskMap, .largeFiles]
+    static let cleanUp: [Section_] = [.junk, .developer, .apps]
 
     var icon: String {
         switch self {
         case .overview: return "gauge.with.dots.needle.67percent"
         case .diskMap: return "square.grid.3x3.square"
         case .largeFiles: return "doc.text.magnifyingglass"
-        case .uninstaller: return "trash.square.fill"
-        case .xcode: return "hammer.fill"
-        case .android: return "smartphone"
-        case .devCaches: return "shippingbox.fill"
-        case .appCaches: return "internaldrive.fill"
-        case .installers: return "arrow.down.circle.fill"
-        case .unusedApps: return "app.dashed"
-        case .system: return "wand.and.stars"
+        case .junk: return "trash.fill"
+        case .developer: return "hammer.fill"
+        case .apps: return "square.grid.2x2.fill"
         case .settings: return "gearshape.fill"
         }
     }
@@ -37,33 +32,60 @@ enum Section_: String, CaseIterable, Identifiable {
     var tint: Color {
         switch self {
         case .overview: return Theme.violet
-        case .diskMap: return .blue
+        case .diskMap: return .cyan
         case .largeFiles: return .purple
-        case .uninstaller: return .red
-        case .xcode: return .indigo
-        case .android: return .green
-        case .devCaches: return .orange
-        case .appCaches: return .pink
-        case .installers: return .blue
-        case .unusedApps: return .gray
-        case .system: return Theme.teal
+        case .junk: return .pink
+        case .developer: return .indigo
+        case .apps: return .blue
         case .settings: return .secondary
         }
     }
 
+    var tabs: [SubTab] {
+        switch self {
+        case .junk: return [.appCaches, .installers, .trash, .system]
+        case .developer: return [.xcode, .android, .packageCaches]
+        default: return []
+        }
+    }
+
     /// Where an item found by the scan is listed.
-    static func forCategory(_ category: ItemCategory) -> Section_ {
+    static func forCategory(_ category: ItemCategory) -> (Section_, SubTab?) {
         switch category {
         case .xcodeDeviceSupport, .xcodeSimulatorRuntime, .xcodeSimulatorDevice, .xcodeSimulatorCache,
-             .xcodeDerivedData, .xcodePreviews, .xcodeDocumentation, .xcodeArchive: return .xcode
-        case .androidEmulator, .androidSystemImage, .androidCache: return .android
-        case .devCache: return .devCaches
-        case .appCache, .orphanedSupport: return .appCaches
-        case .installer: return .installers
-        case .unusedApp: return .unusedApps
-        case .largeFile: return .largeFiles
-        case .uninstalledApp: return .uninstaller
-        case .system: return .system
+             .xcodeDerivedData, .xcodePreviews, .xcodeDocumentation, .xcodeArchive: return (.developer, .xcode)
+        case .androidEmulator, .androidSystemImage, .androidCache: return (.developer, .android)
+        case .devCache: return (.developer, .packageCaches)
+        case .appCache, .orphanedSupport: return (.junk, .appCaches)
+        case .installer: return (.junk, .installers)
+        case .system: return (.junk, .system)
+        case .unusedApp, .uninstalledApp: return (.apps, nil)
+        case .largeFile: return (.largeFiles, nil)
+        }
+    }
+}
+
+/// Tabs inside a grouped sidebar destination.
+enum SubTab: String, CaseIterable, Identifiable {
+    case xcode = "Xcode"
+    case android = "Android"
+    case packageCaches = "Package Caches"
+    case appCaches = "App Caches"
+    case installers = "Installers"
+    case trash = "Trash"
+    case system = "System"
+    var id: String { rawValue }
+
+    @MainActor
+    func items(in result: ScanResult) -> [CleanableItem] {
+        switch self {
+        case .xcode: return result.xcodeDeviceSupport + result.xcodeSimulators + result.xcodeBuildData
+        case .android: return result.android
+        case .packageCaches: return result.devCaches
+        case .appCaches: return result.appCaches
+        case .installers: return result.installers
+        case .system: return result.system
+        case .trash: return []
         }
     }
 }
@@ -71,22 +93,25 @@ enum Section_: String, CaseIterable, Identifiable {
 struct ContentView: View {
     @EnvironmentObject var state: AppState
     @State private var selection: Section_?
+    @State private var tabs: [Section_: SubTab] = [:]
 
-    init(initialSelection: Section_ = .overview) {
+    init(initialSelection: Section_ = .overview, initialTab: SubTab? = nil) {
         _selection = State(initialValue: initialSelection)
+        if let initialTab { _tabs = State(initialValue: [initialSelection: initialTab]) }
     }
 
     var body: some View {
         NavigationSplitView {
-            List(Section_.allCases, selection: $selection) { section in
-                Label {
-                    Text(section.rawValue)
-                } icon: {
-                    Image(systemName: section.icon)
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(section.tint)
+            List(selection: $selection) {
+                SwiftUI.Section("Storage") {
+                    ForEach(Section_.storage) { sidebarRow($0) }
                 }
-                .tag(section)
+                SwiftUI.Section("Clean Up") {
+                    ForEach(Section_.cleanUp) { sidebarRow($0) }
+                }
+                SwiftUI.Section {
+                    sidebarRow(.settings)
+                }
             }
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(190)
@@ -107,10 +132,11 @@ struct ContentView: View {
                     }
                 }
         }
-        .frame(minWidth: 720, minHeight: 480)
+        .frame(minWidth: 900, minHeight: 560)
         #if DEBUG
         .onReceive(NotificationCenter.default.publisher(for: .demoSelectSection)) { note in
             if let section = note.object as? Section_ { selection = section }
+            if let (section, tab) = note.object as? (Section_, SubTab) { selection = section; tabs[section] = tab }
         }
         #endif
         .alert("Error", isPresented: .constant(state.lastError != nil), actions: {
@@ -118,22 +144,71 @@ struct ContentView: View {
         }, message: { Text(state.lastError ?? "") })
     }
 
+    private func sidebarRow(_ section: Section_) -> some View {
+        Label {
+            Text(section.rawValue)
+        } icon: {
+            Image(systemName: section.icon)
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(section.tint)
+        }
+        .tag(section)
+    }
+
+    private func open(_ section: Section_, _ tab: SubTab?) {
+        selection = section
+        if let tab { tabs[section] = tab }
+    }
+
+    private func tabBinding(_ section: Section_) -> Binding<SubTab> {
+        Binding(get: { tabs[section] ?? section.tabs[0] }, set: { tabs[section] = $0 })
+    }
+
     @ViewBuilder
     private var detail: some View {
         switch selection ?? .overview {
         case .overview: OverviewView()
-        case .diskMap: DiskMapView(model: state.diskMap, openSection: { selection = $0 })
+        case .diskMap: DiskMapView(model: state.diskMap, openSection: open)
         case .largeFiles: LargeFilesView(model: state.largeFiles)
-        case .uninstaller: UninstallerView(model: state.uninstaller)
-        case .xcode: CategoryListView(title: "Xcode", items: state.result.xcodeDeviceSupport + state.result.xcodeSimulators + state.result.xcodeBuildData)
-        case .android: CategoryListView(title: "Android", items: state.result.android)
-        case .devCaches: CategoryListView(title: "Dev Caches", items: state.result.devCaches)
-        case .appCaches: CategoryListView(title: "App Caches", items: state.result.appCaches)
-        case .installers: CategoryListView(title: "Installers", items: state.result.installers)
-        case .unusedApps: CategoryListView(title: "Unused Apps", items: state.result.unusedApps)
-        case .system: CategoryListView(title: "System", items: state.result.system)
+        case .junk: TabbedCategoryView(section: .junk, tab: tabBinding(.junk))
+        case .developer: TabbedCategoryView(section: .developer, tab: tabBinding(.developer))
+        case .apps: UninstallerView(model: state.uninstaller)
         case .settings: SettingsView()
         }
+    }
+}
+
+/// A grouped destination: a segmented tab bar, each tab with its size.
+struct TabbedCategoryView: View {
+    let section: Section_
+    @Binding var tab: SubTab
+    @EnvironmentObject var state: AppState
+
+    private func size(_ tab: SubTab) -> Int64 {
+        tab == .trash ? state.trash.sizeBytes : tab.items(in: state.result).reduce(0) { $0 + $1.sizeBytes }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Picker("", selection: $tab) {
+                ForEach(section.tabs) { tab in
+                    let bytes = size(tab)
+                    Text(bytes > 0 ? "\(tab.rawValue)  \(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))" : tab.rawValue)
+                        .tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            Divider()
+            if tab == .trash {
+                TrashView(model: state.trash)
+            } else {
+                CategoryListView(title: section.rawValue, items: tab.items(in: state.result))
+            }
+        }
+        .navigationTitle(section.rawValue)
     }
 }
 
@@ -155,7 +230,7 @@ struct OverviewView: View {
                             .foregroundStyle(Theme.amber)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Tidy can't see your Home folder yet").font(.system(size: 13, weight: .semibold))
-                            Text("Most caches and Xcode data live there. Choose your Home folder once so scans can reach them.")
+                            Text("Grant it once so Tidy can find caches and junk.")
                                 .font(.system(size: 11)).foregroundStyle(.secondary)
                         }
                         Spacer()

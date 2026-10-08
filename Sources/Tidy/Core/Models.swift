@@ -64,11 +64,10 @@ struct ScanResult {
     var devCaches: [CleanableItem] = []
     var appCaches: [CleanableItem] = []
     var installers: [CleanableItem] = []
-    var unusedApps: [CleanableItem] = []
     var system: [CleanableItem] = []
 
     var all: [CleanableItem] {
-        xcodeDeviceSupport + xcodeSimulators + xcodeBuildData + android + devCaches + appCaches + installers + unusedApps + system
+        xcodeDeviceSupport + xcodeSimulators + xcodeBuildData + android + devCaches + appCaches + installers + system
     }
 
     var reclaimableBytes: Int64 {

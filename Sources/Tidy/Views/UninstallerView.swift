@@ -88,6 +88,8 @@ struct UninstallerView: View {
     @ObservedObject private var folderAccess = FolderAccess.shared
     @State private var search = ""
     @State private var sort: Sort = .size
+    @State private var unusedOnly = false
+    static let unusedDays = 90
     @State private var selected: UninstallerModule.InstalledApp?
 
     enum Sort: String, CaseIterable, Identifiable {
@@ -96,7 +98,10 @@ struct UninstallerView: View {
     }
 
     private var visibleApps: [UninstallerModule.InstalledApp] {
-        let filtered = search.isEmpty ? model.apps : model.apps.filter { $0.name.localizedCaseInsensitiveContains(search) }
+        let filtered = model.apps.filter { app in
+            (search.isEmpty || app.name.localizedCaseInsensitiveContains(search))
+                && (!unusedOnly || FSUtil.daysSince(app.lastOpened) >= Self.unusedDays)
+        }
         switch sort {
         case .size: return filtered.sorted { $0.sizeBytes > $1.sizeBytes }
         case .name: return filtered
@@ -112,7 +117,7 @@ struct UninstallerView: View {
                         Image(systemName: "lock.open").font(.system(size: 20)).foregroundStyle(Theme.amber)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Allow Tidy to remove apps").font(.system(size: 13, weight: .semibold))
-                            Text("To move an app you choose to the Trash, Tidy needs access to your Applications folder. Until then, Tidy shows apps in Finder for you to remove.")
+                            Text("Grant the Applications folder once. Until then, Tidy shows apps in Finder.")
                                 .font(.system(size: 11)).foregroundStyle(.secondary)
                         }
                         Spacer()
@@ -125,6 +130,13 @@ struct UninstallerView: View {
                     TextField("Search apps", text: $search)
                         .textFieldStyle(.roundedBorder)
                         .frame(maxWidth: 260)
+                    Picker("", selection: $unusedOnly) {
+                        Text("All Apps").tag(false)
+                        Text("Unused 3+ Months").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .frame(width: 240)
                     Picker("Sort by", selection: $sort) {
                         ForEach(Sort.allCases) { Text($0.rawValue).tag($0) }
                     }
@@ -144,7 +156,7 @@ struct UninstallerView: View {
                 .listStyle(.inset)
             }
         }
-        .navigationTitle("Uninstaller")
+        .navigationTitle("Apps")
         .onAppear { if !model.hasLoaded { model.load() } }
         .sheet(item: $selected) { app in
             UninstallSheet(app: app, model: model) { freed in

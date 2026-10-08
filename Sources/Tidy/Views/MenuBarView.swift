@@ -67,14 +67,6 @@ struct MenuBarView: View {
             .buttonStyle(.plain)
             .font(.system(size: 12))
 
-            HStack(spacing: 14) {
-                Button("Send Feedback…") { Feedback.sendFeedback() }
-                Button("Rate Tidy") { Feedback.openWriteReview() }
-            }
-            .buttonStyle(.plain)
-            .font(.system(size: 12))
-            .foregroundStyle(.secondary)
-
             Button("Quit Tidy") {
                 NSApp.terminate(nil)
             }
