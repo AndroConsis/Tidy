@@ -46,9 +46,7 @@ final class UninstallerModel: ObservableObject {
             _ = try await NSWorkspace.shared.recycle([app.url])
         } catch {
             NSWorkspace.shared.activateFileViewerSelecting([app.url])
-            return .needsFinder(app.isFromAppStore
-                ? "\(app.name) came from the App Store, so macOS asks you to remove it yourself. It's selected in Finder: drag it to the Trash, or hold it in Launchpad and click ×. Then come back to remove its leftover files."
-                : "macOS didn't let Tidy move \(app.name). It's selected in Finder: drag it to the Trash, then come back to remove its leftover files.")
+            return .needsFinder("macOS didn't allow it. Delete \(app.name) in Finder; Tidy will then remove its leftovers.")
         }
         var freed = app.sizeBytes
         var failures: [String] = []
@@ -214,7 +212,11 @@ struct UninstallSheet: View {
     @State private var message: String?
     @State private var appGone = false
     @State private var watcher: Task<Void, Never>?
+    @ObservedObject private var folderAccess = FolderAccess.shared
 
+    private var route: UninstallerModule.RemovalRoute {
+        UninstallerModule.removalRoute(for: app, hasApplicationsAccess: folderAccess.hasApplicationsAccess)
+    }
     private var chosen: [UninstallerModule.Leftover] { leftovers.filter { included.contains($0.url) } }
     private var total: Int64 { (appGone ? 0 : app.sizeBytes) + chosen.reduce(0) { $0 + $1.sizeBytes } }
     private var isRunning: Bool { UninstallerModule.isRunning(app) }
@@ -253,7 +255,7 @@ struct UninstallSheet: View {
                                     HStack {
                                         VStack(alignment: .leading, spacing: 1) {
                                             Text(leftover.kind).font(.system(size: 12))
-                                            Text("~/Library/" + leftover.url.path.components(separatedBy: "/Library/").dropFirst().joined(separator: "/Library/"))
+                                            Text("~" + leftover.url.path.dropFirst(FSUtil.home.path.count))
                                                 .font(.system(size: 10)).foregroundStyle(.secondary)
                                                 .lineLimit(1).truncationMode(.middle)
                                         }
@@ -272,10 +274,13 @@ struct UninstallSheet: View {
             .background(Theme.cardBackground(cornerRadius: 10))
 
             if let message {
-                Text(message).font(.system(size: 12)).foregroundStyle(Theme.amber)
-                    .fixedSize(horizontal: false, vertical: true)
+                note(message, icon: appGone ? "checkmark.circle.fill" : "info.circle.fill")
             } else if isRunning {
-                Text("\(app.name) is open. Quit it first, then uninstall.").font(.system(size: 12)).foregroundStyle(Theme.amber)
+                note("\(app.name) is open. Quit it first.", icon: "exclamationmark.circle.fill")
+            } else if route == .finder {
+                note("macOS needs you to delete \(app.name) in Finder. Tidy will show it there, then remove its leftovers.", icon: "info.circle.fill")
+            } else if route == .needsAccess {
+                note("Tidy needs your Applications folder once to remove apps.", icon: "lock.fill")
             }
 
             HStack {
@@ -288,6 +293,17 @@ struct UninstallSheet: View {
                         dismiss()
                     }
                     .disabled(chosen.isEmpty)
+                } else if route == .needsAccess {
+                    Button("Grant Access…") { folderAccess.requestApplicationsAccess() }
+                        .keyboardShortcut(.defaultAction)
+                } else if route == .finder {
+                    Button("Show in Finder") {
+                        NSWorkspace.shared.activateFileViewerSelecting([app.url])
+                        message = "Drag \(app.name) to the Trash in Finder. This window will then offer its leftovers."
+                        watchForRemoval()
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(watcher != nil || isRunning)
                 } else {
                     Button("Move to Trash", role: .destructive) {
                         isWorking = true
@@ -321,6 +337,16 @@ struct UninstallSheet: View {
         }
     }
 
+    private func note(_ text: String, icon: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon).foregroundStyle(appGone ? Theme.teal : Theme.amber)
+            Text(text).font(.system(size: 12))
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 8).fill((appGone ? Theme.teal : Theme.amber).opacity(0.12)))
+    }
+
     /// After the user removes the app in Finder, offer its leftovers.
     private func watchForRemoval() {
         watcher = Task {
@@ -328,7 +354,7 @@ struct UninstallSheet: View {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 if !FSUtil.exists(app.url.path) {
                     appGone = true
-                    message = "\(app.name) is in the Trash. You can now remove its leftover files."
+                    message = "\(app.name) is in the Trash. Now remove its leftovers."
                     model.apps.removeAll { $0.id == app.id }
                 }
             }

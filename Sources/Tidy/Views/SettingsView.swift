@@ -72,7 +72,7 @@ struct SettingsView: View {
                               text: "Removals go to the Trash, so Finder can put them back.")
                     SettingsDivider()
                     SettingsSafetyRow(icon: "hand.raised.fill", color: Theme.amber, title: "You decide",
-                              text: "Only Safe items are ever cleaned without a click. Emptying the Trash always asks first.")
+                              text: "Only Safe items are ever cleaned without a click. Everything else waits for you.")
                     SettingsDivider()
                     SettingsSafetyRow(icon: "photo.fill", color: .pink, title: "Personal data stays put",
                               text: "Photos, Mail and Messages are never cleaned. Tidy points you to the right setting.")

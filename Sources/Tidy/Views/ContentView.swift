@@ -185,7 +185,7 @@ struct TabbedCategoryView: View {
     @EnvironmentObject var state: AppState
 
     private func size(_ tab: SubTab) -> Int64 {
-        tab == .trash ? state.trash.sizeBytes : tab.items(in: state.result).reduce(0) { $0 + $1.sizeBytes }
+        tab.items(in: state.result).reduce(0) { $0 + $1.sizeBytes }
     }
 
     var body: some View {
@@ -203,7 +203,7 @@ struct TabbedCategoryView: View {
             .padding(.vertical, 12)
             Divider()
             if tab == .trash {
-                TrashView(model: state.trash)
+                TrashView()
             } else {
                 CategoryListView(title: section.rawValue, items: tab.items(in: state.result))
             }

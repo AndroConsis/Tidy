@@ -12,7 +12,6 @@ final class AppState: ObservableObject {
     let largeFiles = LargeFilesModel()
     let diskMap = DiskMapModel()
     let uninstaller = UninstallerModel()
-    let trash = TrashModel()
 
     // Auto-clean settings, persisted in UserDefaults. Only ever touches
     // .regenerable ("SAFE") items — REVIEW and MANUAL items always require
@@ -77,7 +76,6 @@ final class AppState: ObservableObject {
     func scan() async {
         isScanning = true
         result = await Scanner.runFullScan()
-        trash.refresh()
         lastScanDate = Date()
         isScanning = false
         Notifier.notifyIfWorthwhile(result: result)

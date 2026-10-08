@@ -72,6 +72,29 @@ enum UninstallerModule {
         return MDItemCopyAttribute(item, kMDItemLastUsedDate) as? Date
     }
 
+    /// How this app can be removed, worked out before the user clicks so the
+    /// sheet can say up front whether Finder will be involved.
+    enum RemovalRoute: Equatable {
+        case direct
+        /// Tidy could remove it once the user grants the Applications folder.
+        case needsAccess
+        /// Owned by the system (App Store and many installers): only Finder,
+        /// which can ask for the user's password, can move it.
+        case finder
+    }
+
+    static func removalRoute(for app: InstalledApp, hasApplicationsAccess: Bool, home: URL = FSUtil.home) -> RemovalRoute {
+        if app.isFromAppStore { return .finder }
+        let fm = FSUtil.fm
+        let ownedByUser = ((try? fm.attributesOfItem(atPath: app.url.path))?[.ownerAccountID] as? NSNumber)?.uint32Value == getuid()
+        // Moving a folder needs write access to it and to the folder it's in.
+        let unixAllows = ownedByUser && access(app.url.path, W_OK) == 0
+            && access(app.url.deletingLastPathComponent().path, W_OK) == 0
+        guard unixAllows else { return .finder }
+        let inHomeApplications = app.url.path.hasPrefix(home.appendingPathComponent("Applications").path + "/")
+        return inHomeApplications || hasApplicationsAccess ? .direct : .needsAccess
+    }
+
     static func isRunning(_ app: InstalledApp) -> Bool {
         !NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleID).isEmpty
     }
@@ -115,6 +138,11 @@ enum UninstallerModule {
             for url in files where url.lastPathComponent.hasPrefix(id + ".") && url.pathExtension == "plist" {
                 found.append(Leftover(url: url, kind: kind, sizeBytes: FSUtil.size(of: url)))
             }
+        }
+        // Data kept in the Home folder, e.g. ~/.lmstudio for LM Studio.
+        for (url, contents) in FolderOwners.knownFolders(for: id, home: home) where seen.insert(url.path).inserted {
+            found.append(Leftover(url: url, kind: contents.prefix(1).uppercased() + contents.dropFirst(),
+                                  sizeBytes: FSUtil.size(of: url, includingPackages: true)))
         }
         return found.sorted { $0.sizeBytes > $1.sizeBytes }
     }

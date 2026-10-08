@@ -27,13 +27,18 @@ enum LargeFilesModule {
     /// Walks the Home folder for files of at least `minBytes`. Packages such
     /// as a Photos library, an app or a Final Cut library are never entered
     /// or listed: they look like one file but are managed by their own app.
-    static func scan(home: URL = FSUtil.home, minBytes: Int64,
+    /// `root` is the Home folder (Library, apps and hidden folders skipped) or,
+    /// for "large files in this folder" from the Disk Map, any folder in it.
+    static func scan(home: URL = FSUtil.home, root: URL? = nil, minBytes: Int64,
                      isCancelled: () -> Bool = { false },
                      progress: (Int) -> Void = { _ in }) -> [LargeFile] {
         let keys: [URLResourceKey] = [.isDirectoryKey, .isPackageKey, .isSymbolicLinkKey,
                                       .totalFileAllocatedSizeKey, .fileAllocatedSizeKey]
-        let roots = ((try? FSUtil.fm.contentsOfDirectory(at: home, includingPropertiesForKeys: keys, options: [.skipsHiddenFiles])) ?? [])
-            .filter { !skippedTopLevel.contains($0.lastPathComponent) }
+        let base = root ?? home
+        let isWholeHome = base.standardizedFileURL.path == home.standardizedFileURL.path
+        let roots = ((try? FSUtil.fm.contentsOfDirectory(at: base, includingPropertiesForKeys: keys, options: isWholeHome ? [.skipsHiddenFiles] : [])) ?? [])
+            .filter { !isWholeHome || !skippedTopLevel.contains($0.lastPathComponent) }
+            .filter { !DiskMapModule.isSkipped($0, home: home) }
 
         var found: [URL: Int64] = [:]
         var visited = 0
@@ -60,7 +65,7 @@ enum LargeFilesModule {
                 }
                 guard let v = try? url.resourceValues(forKeys: Set(keys)), v.isSymbolicLink != true else { continue }
                 if v.isDirectory == true {
-                    if v.isPackage == true || skippedFolderNames.contains(url.lastPathComponent) {
+                    if v.isPackage == true || skippedFolderNames.contains(url.lastPathComponent) || DiskMapModule.isSkipped(url, home: home) {
                         enumerator.skipDescendants()
                     }
                     continue

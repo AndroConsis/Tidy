@@ -12,10 +12,20 @@ final class LargeFilesModel: ObservableObject {
     @Published var visitedCount = 0
     @Published var lastScanDate: Date?
     @Published var minBytes: Int64 = 500_000_000
+    /// A folder chosen from the Disk Map; nil searches the whole Home folder.
+    @Published var scope: URL?
     private var cancelled = false
+
+    func search(in folder: URL?) {
+        scope = folder
+        files = []
+        lastScanDate = nil
+        scan()
+    }
 
     func scan() {
         guard !isScanning else { return }
+        let scope = scope
         isScanning = true
         cancelled = false
         visitedCount = 0
@@ -23,6 +33,7 @@ final class LargeFilesModel: ObservableObject {
             let files = LargeFilesModule.scan(
                 // Always gather everything over 100 MB; the size picker
                 // just filters, so changing it doesn't need a new search.
+                root: scope,
                 minBytes: 100_000_000,
                 isCancelled: { [weak self] in
                     guard let self else { return true }
@@ -110,6 +121,15 @@ struct LargeFilesView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Find big files you may have forgotten — old downloads, videos, disk images and archives in your Home folder. Tidy only lists them; nothing is removed unless you choose it.")
                 .font(.system(size: 12)).foregroundStyle(.secondary)
+            if let scope = model.scope {
+                HStack(spacing: 8) {
+                    Label("Searching in ~\(scope.path.dropFirst(FSUtil.home.path.count))", systemImage: "folder")
+                        .font(.system(size: 12, weight: .medium))
+                    Button("Search Whole Home Folder") { model.search(in: nil) }
+                        .controlSize(.small)
+                        .disabled(model.isScanning)
+                }
+            }
             HStack(spacing: 14) {
                 Picker("Larger than", selection: $model.minBytes) {
                     ForEach(Self.sizeOptions, id: \.1) { Text($0.0).tag($0.1) }

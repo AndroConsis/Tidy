@@ -127,6 +127,7 @@ struct DiskMapView: View {
     @ObservedObject var model: DiskMapModel
     let openSection: (Section_, SubTab?) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pendingFolderTrash: DiskMapModule.Node?
 
     var body: some View {
         ZStack {
@@ -151,7 +152,13 @@ struct DiskMapView: View {
                         DiskMapInspector(node: model.selected ?? current, isCurrentFolder: model.selected == nil,
                                          items: cleanableItems(in: model.selected ?? current),
                                          onOpen: { model.open($0) },
-                                         onClean: clean, onLargeFiles: { openSection(.largeFiles, nil) })
+                                         onClean: clean,
+                                         onLargeFiles: { node in
+                                             state.largeFiles.search(in: node.url == FSUtil.home ? nil : node.url)
+                                             openSection(.largeFiles, nil)
+                                         },
+                                         onTrashFolder: { pendingFolderTrash = $0 },
+                                         onOpenApps: { openSection(.apps, nil) })
                             .frame(width: 270)
                     }
                 } else {
@@ -165,12 +172,20 @@ struct DiskMapView: View {
         .padding(14)
         .environment(\.colorScheme, .dark)
         .navigationTitle("Disk Map")
+        .alert(pendingFolderTrash.map { "Move \u{201C}\($0.name)\u{201D} to the Trash?" } ?? "",
+               isPresented: Binding(get: { pendingFolderTrash != nil }, set: { if !$0 { pendingFolderTrash = nil } }),
+               presenting: pendingFolderTrash) { node in
+            Button("Move to Trash", role: .destructive) { trashFolder(node) }
+            Button("Cancel", role: .cancel) {}
+        } message: { node in
+            Text("\(ByteCountFormatter.string(fromByteCount: node.size, countStyle: .file)). You can put it back from the Trash.")
+        }
     }
 
     private var titleBar: some View {
         HStack(spacing: 10) {
             Image(systemName: "square.grid.3x3.square").foregroundStyle(Neon.cyan).neonGlow(Neon.cyan, radius: 6)
-            Text("DISK MAP").font(Neon.mono(13, .bold)).tracking(3).foregroundStyle(.white).neonGlow(Neon.cyan, radius: 4)
+            Text("DISK MAP").font(Neon.mono(13, .bold)).tracking(3).foregroundStyle(.white)
             Spacer()
             if model.root != nil {
                 if model.isScanning {
@@ -235,6 +250,20 @@ struct DiskMapView: View {
 
     private func cleanableBytes(in node: DiskMapModule.Node) -> Int64 {
         cleanableItems(in: node).reduce(0) { $0 + $1.sizeBytes }
+    }
+
+    private func trashFolder(_ node: DiskMapModule.Node) {
+        do {
+            try FSUtil.trash(node.url.path)
+            ActionLog.append(LogEntry(date: Date(), name: node.name, paths: [node.url.path],
+                                      sizeBytes: node.size, category: "Leftover Data"))
+            state.recentActions = ActionLog.read()
+            model.selected = nil
+            model.didRemove([node.url.path], bytes: node.size)
+            Feedback.requestReviewIfEarned(freedBytes: node.size)
+        } catch {
+            state.lastError = "Couldn't move \(node.name) to the Trash: \(error.localizedDescription)"
+        }
     }
 
     private func clean(_ items: [CleanableItem]) {
@@ -309,7 +338,7 @@ struct NeonButtonStyle: ButtonStyle {
             .padding(.vertical, compact ? 5 : 9)
             .background(Capsule().fill(color.opacity(configuration.isPressed ? 0.35 : 0.16)))
             .overlay(Capsule().strokeBorder(color, lineWidth: 1.2))
-            .neonGlow(color, radius: configuration.isPressed ? 10 : 6)
+            .shadow(color: color.opacity(configuration.isPressed ? 0.7 : 0.4), radius: configuration.isPressed ? 8 : 5)
             .contentShape(Capsule())
     }
 }
@@ -493,19 +522,19 @@ struct TreemapView: View {
                             Text(name.uppercased()).font(Neon.mono(rect.width > 150 ? 11 : 9, .bold)).lineLimit(1)
                                 .foregroundStyle(.white)
                         }
-                        Text(sizeText).font(Neon.mono(rect.width > 150 ? 11 : 9)).foregroundStyle(color)
+                        Text(sizeText).font(Neon.mono(rect.width > 150 ? 11 : 9, .semibold)).foregroundStyle(.white.opacity(0.85))
                         if cleanableBytes > 0 && rect.height > 70 && rect.width > 120 {
                             Label(ByteCountFormatter.string(fromByteCount: cleanableBytes, countStyle: .file) + " CLEANABLE",
                                   systemImage: "bolt.fill")
                                 .font(Neon.mono(9, .bold))
                                 .foregroundStyle(Neon.energy)
                                 .padding(.horizontal, 6).padding(.vertical, 2)
+                                .background(Capsule().fill(Color.black.opacity(0.55)))
                                 .overlay(Capsule().strokeBorder(Neon.energy.opacity(0.8), lineWidth: 1))
-                                .neonGlow(Neon.energy, radius: 4)
                                 .padding(.top, 2)
                         }
                     }
-                    .shadow(color: color.opacity(0.7), radius: 3)
+                    .shadow(color: .black.opacity(0.6), radius: 1.5, y: 1)
                     .padding(8)
                 }
             }
@@ -601,7 +630,11 @@ struct DiskMapInspector: View {
     let items: [CleanableItem]
     let onOpen: (DiskMapModule.Node) -> Void
     let onClean: ([CleanableItem]) -> Void
-    let onLargeFiles: () -> Void
+    let onLargeFiles: (DiskMapModule.Node) -> Void
+    let onTrashFolder: (DiskMapModule.Node) -> Void
+    let onOpenApps: () -> Void
+
+    private var verdict: FolderOwners.Verdict? { node.isDirectory ? FolderOwners.verdict(for: node.url) : nil }
 
     private var safeItems: [CleanableItem] { items.filter { $0.safety == .regenerable } }
     private var total: Int64 { items.reduce(0) { $0 + $1.sizeBytes } }
@@ -612,7 +645,7 @@ struct DiskMapInspector: View {
                 Text(isCurrentFolder ? "THIS FOLDER" : "SELECTED").font(Neon.mono(9, .bold)).tracking(2).foregroundStyle(Neon.cyan.opacity(0.7))
                 Text(node.name).font(.system(size: 15, weight: .semibold, design: .rounded)).foregroundStyle(.white).lineLimit(2)
                 Text(ByteCountFormatter.string(fromByteCount: node.size, countStyle: .file))
-                    .font(Neon.mono(22, .bold)).foregroundStyle(Neon.cyan).neonGlow(Neon.cyan, radius: 6)
+                    .font(Neon.mono(22, .bold)).foregroundStyle(Neon.cyan)
                 HStack(spacing: 8) {
                     if node.isDirectory && !isCurrentFolder {
                         Button("OPEN") { onOpen(node) }.buttonStyle(NeonButtonStyle(color: Neon.cyan, compact: true))
@@ -623,20 +656,25 @@ struct DiskMapInspector: View {
                 .padding(.top, 4)
             }
 
+            if let verdict { ownerSection(verdict) }
+
             Rectangle().fill(Neon.cyan.opacity(0.2)).frame(height: 1)
 
             if items.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("NOTHING TO CLEAN HERE").font(Neon.mono(10, .bold)).foregroundStyle(.white.opacity(0.7))
-                    Text("Tidy found no caches or junk in this folder. Big personal files? Look for them in Large Files.")
+                    Text("Tidy found no caches or junk in this folder.")
                         .font(.system(size: 11)).foregroundStyle(.white.opacity(0.55))
-                    Button("FIND LARGE FILES", action: onLargeFiles).buttonStyle(NeonButtonStyle(color: Neon.violet, compact: true))
+                    if node.isDirectory {
+                        Button("LIST BIG FILES IN \(isCurrentFolder ? "HERE" : "THIS FOLDER")") { onLargeFiles(node) }
+                            .buttonStyle(NeonButtonStyle(color: Neon.violet, compact: true))
+                    }
                 }
                 Spacer(minLength: 0)
             } else {
                 HStack {
                     Label("\(ByteCountFormatter.string(fromByteCount: total, countStyle: .file)) CLEANABLE", systemImage: "bolt.fill")
-                        .font(Neon.mono(10, .bold)).foregroundStyle(Neon.energy).neonGlow(Neon.energy, radius: 4)
+                        .font(Neon.mono(10, .bold)).foregroundStyle(Neon.energy)
                     Spacer()
                 }
                 if !safeItems.isEmpty {
@@ -660,6 +698,40 @@ struct DiskMapInspector: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.black.opacity(0.45)))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Neon.cyan.opacity(0.3), lineWidth: 1))
+    }
+}
+
+extension DiskMapInspector {
+    @ViewBuilder
+    func ownerSection(_ verdict: FolderOwners.Verdict) -> some View {
+        let (label, color): (String, Color) = {
+            switch verdict.status {
+            case .keep: return ("KEEP", Neon.cyan)
+            case .appInstalled: return ("APP INSTALLED", Neon.blue)
+            case .appNotInstalled: return ("APP REMOVED", Neon.energy)
+            case .tool: return ("TOOL", Neon.violet)
+            case .personal: return ("YOUR FILES", Neon.magenta)
+            case .system: return ("MACOS", Color(hex: 0x8A97B4))
+            }
+        }()
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text("BELONGS TO").font(Neon.mono(9, .bold)).tracking(2).foregroundStyle(Neon.cyan.opacity(0.7))
+                Spacer()
+                Text(label).font(Neon.mono(8, .bold)).foregroundStyle(color)
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .overlay(Capsule().strokeBorder(color.opacity(0.8), lineWidth: 1))
+            }
+            Text(verdict.owner).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
+            Text(verdict.advice).font(.system(size: 11)).foregroundStyle(.white.opacity(0.65))
+            if verdict.canRemove {
+                Button("MOVE TO TRASH…") { onTrashFolder(node) }
+                    .buttonStyle(NeonButtonStyle(color: Neon.energy, compact: true))
+            } else if case .appInstalled = verdict.status {
+                Button("UNINSTALL IN APPS") { onOpenApps() }
+                    .buttonStyle(NeonButtonStyle(color: Neon.blue, compact: true))
+            }
+        }
     }
 }
 

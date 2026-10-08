@@ -10,20 +10,6 @@ import SwiftUI
 enum ScreenshotRenderer {
     static func runIfRequested() -> Bool {
         let args = CommandLine.arguments
-        // `--probe-access <file>`: records which folders the sandbox lets Tidy read.
-        if let flag = args.firstIndex(of: "--probe-access"), args.count > flag + 1 {
-            _ = FolderAccess.shared
-            var lines = ["home access: \(FolderAccess.shared.hasHomeAccess)"]
-            for folder in [".Trash", "Desktop", "Documents", "Downloads", "Library/Caches"] {
-                let url = FSUtil.home.appendingPathComponent(folder)
-                do {
-                    let n = try FileManager.default.contentsOfDirectory(atPath: url.path).count
-                    lines.append("\(folder): readable, \(n) entries")
-                } catch { lines.append("\(folder): \(error.localizedDescription)") }
-            }
-            try? lines.joined(separator: "\n").write(toFile: args[flag + 1], atomically: true, encoding: .utf8)
-            exit(0)
-        }
         guard let flag = args.firstIndex(of: "--render-screenshots"), args.count > flag + 1 else { return false }
         let outDir = URL(fileURLWithPath: args[flag + 1], isDirectory: true)
         try? FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
@@ -266,9 +252,6 @@ enum SampleData {
             app("Tunebox", 0.38, opened: 75, version: "1.9"), app("Sketchpad", 0.21, opened: nil, version: "2.0"),
         ]
         state.uninstaller.hasLoaded = true
-        state.trash.isSample = true
-        state.trash.sizeBytes = Int64(3.4 * gb)
-        state.trash.itemCount = 128
     }
 
     static var recentActions: [LogEntry] {
