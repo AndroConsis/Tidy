@@ -465,7 +465,6 @@ struct TreemapView: View {
                         }
                 }
             }
-            .overlay { if animated { Scanline() } }
             .onContinuousHover { phase in
                 guard animated else { return }
                 switch phase {
@@ -549,23 +548,6 @@ struct TreemapView: View {
             .accessibilityElement()
             .accessibilityLabel("\(name), \(sizeText)")
             .accessibilityAddTraits(.isButton)
-        }
-    }
-
-    /// A band of light sweeping down the map every few seconds.
-    struct Scanline: View {
-        var body: some View {
-            GeometryReader { geo in
-                TimelineView(.animation(minimumInterval: 1 / 30)) { context in
-                    let phase = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 5) / 5
-                    LinearGradient(colors: [.clear, Neon.cyan.opacity(0.22), .clear], startPoint: .top, endPoint: .bottom)
-                        .frame(height: 70)
-                        .offset(y: CGFloat(phase) * (geo.size.height + 140) - 70)
-                        .blendMode(.plusLighter)
-                }
-            }
-            .clipped()
-            .allowsHitTesting(false)
         }
     }
 
