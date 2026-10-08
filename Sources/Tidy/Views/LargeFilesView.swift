@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 
 /// Holds Large Files results across sidebar switches. Kept apart from
 /// ScanResult so these personal files never count as "Reclaimable" and can
@@ -109,7 +110,6 @@ struct LargeFilesView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Find big files you may have forgotten — old downloads, videos, disk images and archives in your Home folder. Tidy only lists them; nothing is removed unless you choose it.")
                 .font(.system(size: 12)).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 14) {
                 Picker("Larger than", selection: $model.minBytes) {
                     ForEach(Self.sizeOptions, id: \.1) { Text($0.0).tag($0.1) }
@@ -189,7 +189,7 @@ struct LargeFileRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
-            Image(nsImage: NSWorkspace.shared.icon(forFile: file.url.path))
+            Image(nsImage: NSWorkspace.shared.icon(for: UTType(filenameExtension: file.url.pathExtension) ?? .data))
                 .resizable().frame(width: 32, height: 32)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {

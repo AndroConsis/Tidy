@@ -27,6 +27,7 @@ enum ScreenshotRenderer {
         state.recentActions = SampleData.recentActions
         state.lastScanDate = Date().addingTimeInterval(-90)
         state.hasCompletedOnboarding = true
+        SampleData.fillFeatureModels(state)
 
         let sizes: [Section_: NSSize] = [
             .overview: NSSize(width: 1100, height: 560),
@@ -35,12 +36,18 @@ enum ScreenshotRenderer {
             .appCaches: NSSize(width: 1100, height: 440),
             .installers: NSSize(width: 1100, height: 380),
             .system: NSSize(width: 1100, height: 420),
-            .settings: NSSize(width: 1100, height: 600),
+            .settings: NSSize(width: 1100, height: 720),
+            .android: NSSize(width: 1100, height: 520),
+            .largeFiles: NSSize(width: 1100, height: 640),
+            .diskMap: NSSize(width: 1100, height: 720),
+            .uninstaller: NSSize(width: 1100, height: 600),
         ]
         NSApp.activate(ignoringOtherApps: true)
         for appearance in [NSAppearance.Name.darkAqua, .aqua] {
             let suffix = appearance == .darkAqua ? "dark" : "light"
-            for section in [Section_.overview, .xcode, .devCaches, .appCaches, .installers, .system, .settings] {
+            let only = ProcessInfo.processInfo.environment["TIDY_RENDER_ONLY"]
+            for section in [Section_.overview, .diskMap, .largeFiles, .uninstaller, .xcode, .android, .devCaches, .appCaches, .installers, .system, .settings]
+                where only == nil || only == section.rawValue {
                 let view = ContentView(initialSelection: section).environmentObject(state)
                 await capture(view, size: sizes[section]!, appearance: appearance, titled: true,
                               to: dir.appendingPathComponent("\(section.id.replacingOccurrences(of: " ", with: ""))-\(suffix).png"))
@@ -49,7 +56,7 @@ enum ScreenshotRenderer {
                 .environmentObject(state)
                 .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color(nsColor: .windowBackgroundColor)))
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            await capture(menu, size: NSSize(width: 250, height: 260), appearance: appearance, titled: false,
+            await capture(menu, size: NSSize(width: 250, height: 290), appearance: appearance, titled: false,
                           to: dir.appendingPathComponent("MenuBar-\(suffix).png"))
         }
     }
@@ -150,6 +157,16 @@ enum SampleData {
             item("Weatherly 2.3 (41)", "\(dev)/Xcode/Archives/2025-11-02/Weatherly 2.3.xcarchive", 0.41, .review, .xcodeArchive,
                  "An archived build from 312 days ago. Keep it if you may need to symbolicate crash reports from this build or re-export it."),
         ]
+        r.android = [
+            item("Pixel 8 API 34 emulator", "\(home)/.android/avd/Pixel_8_API_34.avd", 9.84, .review, .androidEmulator,
+                 "Last used 143 days ago. Removing it deletes the emulator and the apps and data inside it; you can create a new one in Android Studio's Device Manager.", daysAgo: 143),
+            item("API 33 · Google Play · arm64-v8a", "\(home)/Library/Android/sdk/system-images/android-33/google_apis_playstore/arm64-v8a", 6.71, .review, .androidSystemImage,
+                 "No emulator uses this system image. You can download it again from Android Studio's SDK Manager if you need it.", daysAgo: 260),
+            item("Android Studio 2024.2 caches", "\(home)/Library/Caches/Google/AndroidStudio2024.2", 2.36, .regenerable, .androidCache,
+                 "Indexes and caches Android Studio rebuilds the next time you open a project. The first launch afterwards is a little slower."),
+            item("Android SDK download cache", "\(home)/.android/cache", 0.84, .regenerable, .androidCache,
+                 "Files the SDK Manager downloaded and has already installed. It downloads again only what it needs."),
+        ]
         r.devCaches = [
             item("Gradle cache", "\(home)/.gradle/caches", 4.62, .regenerable, .devCache, "Gradle re-downloads whatever it needs the next time you use it."),
             item("npm cache", "\(home)/.npm", 2.31, .regenerable, .devCache, "npm re-downloads whatever it needs the next time you use it."),
@@ -179,6 +196,60 @@ enum SampleData {
             item("googlechrome.dmg", "\(home)/Downloads/googlechrome.dmg", 0.23, .review, .installer, "Downloaded installer, untouched for 74 days."),
         ]
         return r
+    }
+
+    @MainActor
+    static func fillFeatureModels(_ state: AppState) {
+        let day: TimeInterval = 86_400
+        func file(_ path: String, _ gigabytes: Double, opened: Double?, added: Double, kind: String, iCloud: Bool = false) -> LargeFilesModule.LargeFile {
+            LargeFilesModule.LargeFile(url: URL(fileURLWithPath: "\(home)/\(path)"), sizeBytes: Int64(gigabytes * gb),
+                                       lastOpened: opened.map { Date().addingTimeInterval(-$0 * day) },
+                                       lastModified: Date().addingTimeInterval(-added * day), kind: kind, isInICloud: iCloud)
+        }
+        state.largeFiles.files = [
+            file("Movies/Iceland trip raw footage.mov", 18.4, opened: 410, added: 430, kind: "QuickTime movie"),
+            file("Downloads/ubuntu-24.04-desktop-arm64.iso", 6.1, opened: nil, added: 220, kind: "Disk Image"),
+            file("Documents/Backups/old-laptop-backup.zip", 4.7, opened: 600, added: 610, kind: "ZIP archive", iCloud: true),
+            file("Desktop/Screen Recording 2026-03-14.mov", 2.9, opened: 205, added: 208, kind: "QuickTime movie"),
+            file("Downloads/Final Cut sample media.zip", 1.8, opened: nil, added: 96, kind: "ZIP archive"),
+            file("Music/Podcast masters/Episode 12 master.wav", 1.2, opened: 30, added: 40, kind: "Waveform audio"),
+            file("Movies/Wedding slideshow export.mp4", 0.9, opened: 12, added: 300, kind: "MPEG-4 movie"),
+        ]
+        state.largeFiles.lastScanDate = Date()
+
+        typealias Node = DiskMapModule.Node
+        func folder(_ name: String, _ gigabytes: Double, _ children: [Node]? = nil) -> Node {
+            Node(url: URL(fileURLWithPath: "\(home)/\(name)"), name: name, isDirectory: true, size: Int64(gigabytes * gb), children: children)
+        }
+        let library = folder("Library", 61.2, [
+            Node(url: URL(fileURLWithPath: "\(home)/Library/Developer"), isDirectory: true, size: Int64(34.1 * gb)),
+            Node(url: URL(fileURLWithPath: "\(home)/Library/Caches"), isDirectory: true, size: Int64(9.4 * gb)),
+            Node(url: URL(fileURLWithPath: "\(home)/Library/Application Support"), isDirectory: true, size: Int64(8.8 * gb)),
+            Node(url: URL(fileURLWithPath: "\(home)/Library/Android"), isDirectory: true, size: Int64(6.7 * gb)),
+        ])
+        let root = Node(url: URL(fileURLWithPath: home), isDirectory: true, size: Int64(196 * gb), children: [
+            library, folder("Pictures", 48.3), folder("Movies", 31.6), folder("Documents", 18.2), folder("Downloads", 14.9),
+            folder(".android", 10.7), folder("Projects", 6.4), folder("Music", 4.1), folder(".gradle", 4.6), folder("Desktop", 3.2),
+        ])
+        root.otherSize = Int64(2.4 * gb)
+        root.otherCount = 38
+        state.diskMap.root = root
+        state.diskMap.overview = DiskMapModule.Overview(total: Int64(494 * gb), free: Int64(41 * gb), apps: Int64(38 * gb), home: root.size)
+
+        func app(_ name: String, _ gigabytes: Double, opened: Double?, version: String) -> UninstallerModule.InstalledApp {
+            var a = UninstallerModule.InstalledApp(url: URL(fileURLWithPath: "/Applications/\(name).app"), name: name, bundleName: name,
+                                                   bundleID: "com.example.\(name.lowercased().replacingOccurrences(of: " ", with: ""))",
+                                                   version: version, lastOpened: opened.map { Date().addingTimeInterval(-$0 * day) },
+                                                   isFromAppStore: false)
+            a.sizeBytes = Int64(gigabytes * gb)
+            return a
+        }
+        state.uninstaller.apps = [
+            app("Studio Suite", 6.2, opened: 280, version: "2025.1"), app("PixelForge", 2.8, opened: 3, version: "4.2"),
+            app("Meetly", 0.62, opened: 190, version: "6.0.4"), app("Notebook Pro", 0.41, opened: 1, version: "3.1"),
+            app("Tunebox", 0.38, opened: 75, version: "1.9"), app("Sketchpad", 0.21, opened: nil, version: "2.0"),
+        ]
+        state.uninstaller.hasLoaded = true
     }
 
     static var recentActions: [LogEntry] {

@@ -100,6 +100,7 @@ struct SettingsView: View {
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
                 .background(Theme.cardBackground())
 
