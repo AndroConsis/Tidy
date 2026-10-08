@@ -29,9 +29,9 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSDesktopFolderUsageDescription</key>
-	<string>When you search for large files, Tidy looks on your Desktop for big files such as videos, disk images and archives so you can decide whether to keep them. Tidy only lists them and removes nothing unless you choose it.</string>
+	<string>When you search for large files or open the Disk Map, Tidy looks on your Desktop to measure how much space your files use and to list big ones, such as videos and disk images, so you can decide whether to keep them. Tidy never opens your files and removes nothing unless you choose it.</string>
 	<key>NSDocumentsFolderUsageDescription</key>
-	<string>When you search for large files, Tidy looks in your Documents folder for big files such as videos, disk images and archives so you can decide whether to keep them. Tidy only lists them and removes nothing unless you choose it.</string>
+	<string>When you search for large files or open the Disk Map, Tidy looks in your Documents folder to measure how much space your files use and to list big ones, such as videos and disk images, so you can decide whether to keep them. Tidy never opens your files and removes nothing unless you choose it.</string>
 	<key>NSDownloadsFolderUsageDescription</key>
 	<string>Tidy looks in your Downloads folder for installer files you no longer need, such as a .dmg for an app you've already installed, so you can remove them and free up space. When you search for large files, Tidy also lists big downloads you may have forgotten. Tidy never opens your files and removes nothing unless you choose it.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

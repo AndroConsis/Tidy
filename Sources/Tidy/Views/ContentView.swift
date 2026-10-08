@@ -2,6 +2,7 @@ import SwiftUI
 
 enum Section_: String, CaseIterable, Identifiable {
     case overview = "Overview"
+    case diskMap = "Disk Map"
     case largeFiles = "Large Files"
     case xcode = "Xcode"
     case android = "Android"
@@ -16,6 +17,7 @@ enum Section_: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .overview: return "gauge.with.dots.needle.67percent"
+        case .diskMap: return "square.grid.3x3.square"
         case .largeFiles: return "doc.text.magnifyingglass"
         case .xcode: return "hammer.fill"
         case .android: return "smartphone"
@@ -33,6 +35,7 @@ enum Section_: String, CaseIterable, Identifiable {
     var tint: Color {
         switch self {
         case .overview: return Theme.violet
+        case .diskMap: return .blue
         case .largeFiles: return .purple
         case .xcode: return .indigo
         case .android: return .green
@@ -42,6 +45,21 @@ enum Section_: String, CaseIterable, Identifiable {
         case .unusedApps: return .gray
         case .system: return Theme.teal
         case .settings: return .secondary
+        }
+    }
+
+    /// Where an item found by the scan is listed.
+    static func forCategory(_ category: ItemCategory) -> Section_ {
+        switch category {
+        case .xcodeDeviceSupport, .xcodeSimulatorRuntime, .xcodeSimulatorDevice, .xcodeSimulatorCache,
+             .xcodeDerivedData, .xcodePreviews, .xcodeDocumentation, .xcodeArchive: return .xcode
+        case .androidEmulator, .androidSystemImage, .androidCache: return .android
+        case .devCache: return .devCaches
+        case .appCache, .orphanedSupport: return .appCaches
+        case .installer: return .installers
+        case .unusedApp: return .unusedApps
+        case .largeFile: return .largeFiles
+        case .system: return .system
         }
     }
 }
@@ -100,6 +118,7 @@ struct ContentView: View {
     private var detail: some View {
         switch selection ?? .overview {
         case .overview: OverviewView()
+        case .diskMap: DiskMapView(model: state.diskMap, openSection: { selection = $0 })
         case .largeFiles: LargeFilesView(model: state.largeFiles)
         case .xcode: CategoryListView(title: "Xcode", items: state.result.xcodeDeviceSupport + state.result.xcodeSimulators + state.result.xcodeBuildData)
         case .android: CategoryListView(title: "Android", items: state.result.android)
