@@ -20,24 +20,29 @@ struct Shot {
     var menuBar: String? = nil
 }
 
+// Captions avoid Apple trademarks as product-like terms (App Review 5.2.5)
+// and lead with everyday benefits; developer features come later.
 let shots = [
-    Shot(file: "01-free-up-space", headline: "Free up gigabytes on your Mac",
-         subhead: "Tidy finds the caches, build data and leftovers quietly filling your disk.",
+    Shot(file: "01-free-up-space", headline: "Free up gigabytes of space",
+         subhead: "Tidy finds the caches, leftovers and old downloads quietly filling your disk.",
          window: "Overview-dark", menuBar: "MenuBar-dark"),
-    Shot(file: "02-xcode", headline: "Reclaim space from Xcode",
-         subhead: "DerivedData, old simulators, device support and runtimes — sized and explained.",
-         window: "Xcode-dark", windowScale: 1.78),
-    Shot(file: "03-dev-caches", headline: "Developer caches, cleared safely",
-         subhead: "npm, Homebrew, Gradle, Yarn, CocoaPods and pip rebuild what they need.",
-         window: "DevCaches-dark"),
-    Shot(file: "04-safe-or-review", headline: "Every item marked Safe or Review",
+    Shot(file: "02-safe-or-review", headline: "Every item marked Safe or Review",
          subhead: "Safe items clean in one click. Anything else waits for your say-so.",
          window: "AppCaches-light"),
-    Shot(file: "05-schedule", headline: "Keeps your Mac tidy on its own",
-         subhead: "Schedule automatic cleaning of safe items — daily, weekly or monthly.",
+    Shot(file: "03-photos-untouched", headline: "Your photos stay untouched",
+         subhead: "Tidy never deletes your photos, videos or documents.",
+         window: "System-dark"),
+    Shot(file: "04-xcode", headline: "Reclaim space from Xcode",
+         subhead: "For developers: old build data, simulators and device support, sized and explained.",
+         window: "Xcode-dark", windowScale: 1.78),
+    Shot(file: "05-dev-caches", headline: "Developer caches, cleared safely",
+         subhead: "npm, Homebrew, Gradle, Yarn, CocoaPods and pip rebuild what they need.",
+         window: "DevCaches-dark"),
+    Shot(file: "06-schedule", headline: "Stays tidy on its own",
+         subhead: "Schedule automatic cleaning of safe items: daily, weekly or monthly.",
          window: "Settings-dark"),
-    Shot(file: "06-menu-bar", headline: "Always one click away",
-         subhead: "Lives in your menu bar. Removals go to the Trash, so you can put them back.",
+    Shot(file: "07-menu-bar", headline: "Always one click away",
+         subhead: "Lives in your menu bar. Files go to the Trash, so you can put them back.",
          window: "Installers-dark", menuBar: "MenuBar-light"),
 ]
 

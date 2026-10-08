@@ -28,6 +28,8 @@
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>Tidy looks in your Downloads folder for installer files you no longer need, such as a .dmg for an app you've already installed, so you can remove them and free up space. Tidy never opens or reads your other downloads.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSHumanReadableCopyright</key>

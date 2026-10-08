@@ -34,12 +34,13 @@ enum ScreenshotRenderer {
             .devCaches: NSSize(width: 1100, height: 580),
             .appCaches: NSSize(width: 1100, height: 440),
             .installers: NSSize(width: 1100, height: 380),
+            .system: NSSize(width: 1100, height: 420),
             .settings: NSSize(width: 1100, height: 600),
         ]
         NSApp.activate(ignoringOtherApps: true)
         for appearance in [NSAppearance.Name.darkAqua, .aqua] {
             let suffix = appearance == .darkAqua ? "dark" : "light"
-            for section in [Section_.overview, .xcode, .devCaches, .appCaches, .installers, .settings] {
+            for section in [Section_.overview, .xcode, .devCaches, .appCaches, .installers, .system, .settings] {
                 let view = ContentView(initialSelection: section).environmentObject(state)
                 await capture(view, size: sizes[section]!, appearance: appearance, titled: true,
                               to: dir.appendingPathComponent("\(section.id.replacingOccurrences(of: " ", with: ""))-\(suffix).png"))
@@ -166,6 +167,12 @@ enum SampleData {
             item("com.lumenlabs.PhotoLab", "\(home)/Library/Application Support/com.lumenlabs.PhotoLab", 0.92, .review, .orphanedSupport,
                  "Leftover data for an app that's no longer installed (bundle ID com.lumenlabs.PhotoLab not found)."),
         ]
+        r.system = [CleanableItem(
+            name: "Photos Library", path: "\(home)/Pictures/Photos Library.photoslibrary", paths: [],
+            sizeBytes: 0, lastModified: nil, safety: .personal, category: .system,
+            explanation: "If iCloud Photos is on, turn on \"Optimize Mac Storage\" in Photos > Settings > iCloud instead of deleting anything. Full-size originals stay in iCloud and download on demand.",
+            action: .guide("x-apple.systempreferences:com.apple.Photos-Settings.extension")
+        )]
         r.installers = [
             item("Xcode_16.2.xip", "\(home)/Downloads/Xcode_16.2.xip", 3.12, .review, .installer, "Looks like the installer for Xcode, which is already installed. The installer itself isn't needed anymore."),
             item("Docker.dmg", "\(home)/Downloads/Docker.dmg", 0.61, .review, .installer, "Looks like the installer for Docker, which is already installed. The installer itself isn't needed anymore."),
